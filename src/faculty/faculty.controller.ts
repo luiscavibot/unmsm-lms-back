@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param } from '@nestjs/common';
 import { FacultyService } from './faculty.service';
 import { Faculty } from './entities/faculty.entity';
 import { CreateFacultyDto } from './dto/create-faculty.dto';
@@ -24,5 +24,10 @@ export class FacultyController {
     @Body() updateFacultyDto: UpdateFacultyDto,
   ): Promise<Faculty> {
     return await this.facultyService.update(id, updateFacultyDto);
+  }
+
+  @Delete(':id')
+  async deleteFaculty(@Param('id') id: number): Promise<void> {
+    return await this.facultyService.delete(id);
   }
 }

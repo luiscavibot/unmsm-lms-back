@@ -36,4 +36,14 @@ export class FacultyService {
     faculty.faculty_name = updateFacultyDto.faculty_name;
     return await this.facultyRepository.save(faculty);
   }
+
+  async delete(id: number): Promise<void> {
+    const faculty = await this.facultyRepository.findOne({ where: { faculty_id: id } });
+    
+    if (!faculty) {
+      throw new Error('Faculty not found');
+    }
+
+    await this.facultyRepository.remove(faculty);
+  }
 }
