@@ -23,7 +23,7 @@ export class FacultyService {
   async findOne(id: string): Promise<Faculty> {
     const user = await this.facultyRepository.findOne(id);
     if (!user) {
-      throw new NotFoundException(`Usuario con id ${id} no encontrado`);
+      throw new NotFoundException(`Facultad con id ${id} no encontrado`);
     }
     return user;
   }
