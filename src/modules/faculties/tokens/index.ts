@@ -1,1 +1,1 @@
-export const FACULTY_REPOSITORY = Symbol('USER_REPOSITORY');
+export const FACULTY_REPOSITORY = Symbol('FACULTY_REPOSITORY');
