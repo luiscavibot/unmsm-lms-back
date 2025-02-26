@@ -16,7 +16,7 @@ export class CreateProgramDto {
   @ApiProperty({
     description: 'Tipo de programa',
     enum: ProgramType,
-    example: ProgramType.POSGRADO_DIPLOMADO,
+    example: ProgramType.PosgradoDiplomado,
   })
   type: ProgramType;
 

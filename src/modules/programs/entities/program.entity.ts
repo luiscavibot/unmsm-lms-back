@@ -13,13 +13,13 @@ export class Program {
   @Column({
     type: 'enum',
     enum: ProgramType,
-    default: ProgramType.PREGRADO
+    default: ProgramType.Pregrado
   })
   type: ProgramType;
 
-  @ManyToOne(() => Faculty, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Faculty, { onDelete: 'SET NULL' })
   faculty: Faculty;
 
-  @Column()
+  @Column({ nullable: true })
   facultyId: string;
 }

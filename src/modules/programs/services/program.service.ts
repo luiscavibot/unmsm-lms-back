@@ -36,7 +36,7 @@ export class ProgramService {
     if (updateProgramDto.facultyId) {
       await this.facultyService.findOne(updateProgramDto.facultyId);
     }
-    return this.programRepository.update(id, updateProgramDto);
+    return this.programRepository.update(program.id, updateProgramDto);
   }
 
   async remove(id: string): Promise<void> {
