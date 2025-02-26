@@ -21,19 +21,19 @@ export class FacultyService {
   }
 
   async findOne(id: string): Promise<Faculty> {
-    const user = await this.facultyRepository.findOne(id);
-    if (!user) {
+    const faculty = await this.facultyRepository.findOne(id);
+    if (!faculty) {
       throw new NotFoundException(`Facultad con id ${id} no encontrado`);
     }
-    return user;
+    return faculty;
   }
 
-  async update(id: string, updateUserDto: UpdateFacultyDto): Promise<Faculty | null> {
+  async update(id: string, updateFacultyDto: UpdateFacultyDto): Promise<Faculty | null> {
     const faculty = await this.findOne(id);
     if (!faculty) {
       throw new NotFoundException(`Facultad con id ${id} no encontrado`);
     }
-    return this.facultyRepository.update(faculty.id, updateUserDto);
+    return this.facultyRepository.update(faculty.id, updateFacultyDto);
   }
 
   async remove(id: string): Promise<void> {
