@@ -28,12 +28,12 @@ export class FacultyService {
     return user;
   }
 
-  async update(
-    id: string,
-    updateUserDto: UpdateFacultyDto,
-  ): Promise<Faculty | null> {
-    const user = await this.findOne(id);
-    return this.facultyRepository.update(user.id, updateUserDto);
+  async update(id: string, updateUserDto: UpdateFacultyDto): Promise<Faculty | null> {
+    const faculty = await this.findOne(id);
+    if (!faculty) {
+      throw new NotFoundException(`Facultad con id ${id} no encontrado`);
+    }
+    return this.facultyRepository.update(faculty.id, updateUserDto);
   }
 
   async remove(id: string): Promise<void> {
