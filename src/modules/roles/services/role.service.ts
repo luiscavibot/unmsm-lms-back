@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '../entities/role.entity';
 import { CreateRoleDto } from '../dtos/create-role.dto';
 import { UpdateRoleDto } from '../dtos/update-role.dto';
-import { ROLE_REPOSITORY } from '../tokens/tokens';
+import { ROLE_REPOSITORY } from '../tokens';
 import { IRoleRepository } from '../interfaces/role.repository.interface';
 
 @Injectable()
