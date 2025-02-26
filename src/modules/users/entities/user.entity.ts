@@ -1,0 +1,26 @@
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Role } from '../../roles/entities/role.entity';
+
+@Entity({ name: 'users' })
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ nullable: true })
+  roleId: string;
+
+  @Column({ length: 100 })
+  firstName: string;
+
+  @Column({ length: 100 })
+  lastName: string;
+
+  @Column({ unique: true })
+  email: string;
+
+  @Column()
+  password: string;
+
+  @ManyToOne(() => Role, { onDelete: 'SET NULL' })
+  role: Role;
+}
