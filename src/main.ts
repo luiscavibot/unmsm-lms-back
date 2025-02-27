@@ -7,6 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
   app.setGlobalPrefix('api');
+  
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -14,6 +15,7 @@ async function bootstrap() {
       // transform: true,
     }),
   );
+
   const config = new DocumentBuilder()
     .setTitle('UNMSM LMS API')
     .setDescription('API for UNMSM LMS')
@@ -21,8 +23,11 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-
   SwaggerModule.setup('api/docs', app, document);
+
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get('/', (req, res) => res.redirect('/api/docs'));
+  
   await app.listen(process.env.APP_PORT ?? 4000);
 }
 bootstrap();
