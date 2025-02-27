@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity({ name: 'users' })
 export class User {
@@ -19,7 +20,8 @@ export class User {
   email: string;
 
   @Column()
-  password: string;
+  @Exclude()
+  password?: string;
 
   @ManyToOne(() => Role, { onDelete: 'SET NULL' })
   role: Role;

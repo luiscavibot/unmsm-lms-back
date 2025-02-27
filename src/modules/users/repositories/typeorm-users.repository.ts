@@ -13,7 +13,9 @@ export class TypeormUsersRepository implements IUserRepository {
 
   async create(user: Partial<User>): Promise<User> {
     const newUser = this.repository.create(user);
-    return await this.repository.save(newUser);
+    const savedUser = await this.repository.save(newUser);
+    delete savedUser.password;
+    return savedUser;
   }
 
   async findAll(): Promise<User[]> {
