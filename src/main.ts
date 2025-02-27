@@ -2,11 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { RootRedirectInterceptor } from './common/interceptors/root-redirect.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.enableCors();
   app.setGlobalPrefix('api');
+  app.useGlobalInterceptors(new RootRedirectInterceptor());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
