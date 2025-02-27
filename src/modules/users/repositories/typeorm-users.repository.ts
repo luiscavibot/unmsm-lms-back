@@ -19,6 +19,13 @@ export class TypeormUsersRepository implements IUserRepository {
   async findAll(): Promise<User[]> {
     return await this.repository.find({
       relations: ['role'],
+      select: {
+        id: true,
+        roleId: true,
+        firstName: true,
+        lastName: true,
+        email: true
+      }
     });
   }
 
