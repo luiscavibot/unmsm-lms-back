@@ -33,6 +33,13 @@ export class TypeormUsersRepository implements IUserRepository {
     return await this.repository.findOne({
       where: { id },
       relations: ['role'],
+      select: {
+        id: true,
+        roleId: true,
+        firstName: true,
+        lastName: true,
+        email: true
+      }
     });
   }
 
