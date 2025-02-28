@@ -6,6 +6,14 @@ import { IUserRepository } from '../interfaces/user.repository.interface';
 
 @Injectable()
 export class TypeormUsersRepository implements IUserRepository {
+  private readonly defaultSelect = {
+    id: true,
+    roleId: true,
+    firstName: true,
+    lastName: true,
+    email: true
+  };
+
   constructor(
     @InjectRepository(User)
     private readonly repository: Repository<User>,
@@ -21,13 +29,7 @@ export class TypeormUsersRepository implements IUserRepository {
   async findAll(): Promise<User[]> {
     return await this.repository.find({
       relations: ['role'],
-      select: {
-        id: true,
-        roleId: true,
-        firstName: true,
-        lastName: true,
-        email: true
-      }
+      select: this.defaultSelect
     });
   }
 
@@ -35,13 +37,7 @@ export class TypeormUsersRepository implements IUserRepository {
     return await this.repository.findOne({
       where: { id },
       relations: ['role'],
-      select: {
-        id: true,
-        roleId: true,
-        firstName: true,
-        lastName: true,
-        email: true
-      }
+      select: this.defaultSelect
     });
   }
 
@@ -49,13 +45,7 @@ export class TypeormUsersRepository implements IUserRepository {
     return await this.repository.findOne({
       where: { email },
       relations: ['role'],
-      select: {
-        id: true,
-        roleId: true,
-        firstName: true,
-        lastName: true,
-        email: true
-      }
+      select: this.defaultSelect
     });
   }
 
