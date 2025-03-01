@@ -20,5 +20,6 @@ import { FacultiesModule } from '../faculties/faculties.module';
       useClass: TypeormProgramsRepository,
     },
   ],
+  exports: [ProgramService],
 })
 export class ProgramsModule {}

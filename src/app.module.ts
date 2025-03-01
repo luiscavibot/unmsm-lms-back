@@ -6,6 +6,7 @@ import { ProgramsModule } from './modules/programs/programs.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { CourseModule } from './modules/courses/course.module';
+import { ProgramCourseModule } from './modules/program-courses/program-course.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CourseModule } from './modules/courses/course.module';
     RolesModule,
     UsersModule,
     CourseModule,
+    ProgramCourseModule,
   ],
 })
 export class AppModule {}
