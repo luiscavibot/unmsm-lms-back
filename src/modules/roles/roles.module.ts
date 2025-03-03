@@ -16,6 +16,6 @@ import { TypeormRolesRepository } from './repositories/typeorm-roles.repository'
       useClass: TypeormRolesRepository,
     },
   ],
-  exports: [RoleService],
+  exports: [RoleService, ROLE_REPOSITORY],
 })
 export class RolesModule {}

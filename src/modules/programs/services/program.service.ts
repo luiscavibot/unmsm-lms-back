@@ -5,12 +5,14 @@ import { UpdateProgramDto } from '../dtos/update-program.dto';
 import { PROGRAM_REPOSITORY } from '../tokens';
 import { IProgramRepository } from '../interfaces/program.repository.interface';
 import { FacultyService } from '../../faculties/services/faculty.service';
+import { FACULTY_REPOSITORY } from 'src/modules/faculties/tokens';
 
 @Injectable()
 export class ProgramService {
   constructor(
     @Inject(PROGRAM_REPOSITORY)
     private readonly programRepository: IProgramRepository,
+    @Inject(FACULTY_REPOSITORY)
     private readonly facultyService: FacultyService,
   ) {}
 

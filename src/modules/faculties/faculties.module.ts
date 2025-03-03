@@ -16,6 +16,6 @@ import { TypeormFacultiesRepository } from './repositories/typeorm-faculties.rep
       useClass: TypeormFacultiesRepository,
     },
   ],
-  exports: [FacultyService],
+  exports: [FacultyService, FACULTY_REPOSITORY],
 })
 export class FacultiesModule {}
