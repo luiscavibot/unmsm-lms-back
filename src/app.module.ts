@@ -9,6 +9,7 @@ import { CourseModule } from './modules/courses/course.module';
 import { ProgramCourseModule } from './modules/program-courses/program-course.module';
 import { ClassSessionModule } from './modules/class-sessions/class-session.module';
 import { EnrollmentModule } from './modules/enrollments/enrollment.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { EnrollmentModule } from './modules/enrollments/enrollment.module';
     ProgramCourseModule,
     ClassSessionModule,
     EnrollmentModule,
+    AttendanceModule
   ],
 })
 export class AppModule {}
