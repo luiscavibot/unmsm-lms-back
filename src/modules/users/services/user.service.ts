@@ -6,6 +6,7 @@ import { USER_REPOSITORY } from '../tokens';
 import { ROLE_REPOSITORY } from '../../roles/tokens';
 import { IUserRepository } from '../interfaces/user.repository.interface';
 import { IRoleRepository } from '../../roles/interfaces/role.repository.interface';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -23,12 +24,15 @@ export class UserService {
         throw new NotFoundException(`El rol con id ${createUserDto.roleId} no existe`);
       }
     }
-    
+
     const existingUser = await this.userRepository.findByEmail(createUserDto.email);
     if (existingUser) {
       throw new NotFoundException('El correo electrónico ya está registrado');
     }
-    
+
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    createUserDto.password = hashedPassword;
+
     return await this.userRepository.create(createUserDto);
   }
 
@@ -40,6 +44,14 @@ export class UserService {
     const user = await this.userRepository.findOne(id);
     if (!user) {
       throw new NotFoundException(`Usuario con id ${id} no encontrado`);
+    }
+    return user;
+  }
+
+  async findByEmail(email: string): Promise<User> {
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
+      throw new NotFoundException(`Usuario con correo electrónico ${email} no encontrado`);
     }
     return user;
   }
@@ -58,6 +70,12 @@ export class UserService {
         throw new Error('El correo electrónico ya está registrado');
       }
     }
+
+    if (updateUserDto.password) {
+      const hashedPassword = await bcrypt.hash(updateUserDto.password, 10);
+      updateUserDto.password = hashedPassword;
+    }
+
     return this.userRepository.update(id, updateUserDto);
   }
 
