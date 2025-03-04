@@ -7,6 +7,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { CourseModule } from './modules/courses/course.module';
 import { ProgramCourseModule } from './modules/program-courses/program-course.module';
+import { ClassSessionModule } from './modules/class-sessions/class-session.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ProgramCourseModule } from './modules/program-courses/program-course.mo
     UsersModule,
     CourseModule,
     ProgramCourseModule,
+    ClassSessionModule,
   ],
 })
 export class AppModule {}
