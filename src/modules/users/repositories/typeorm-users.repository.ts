@@ -11,7 +11,7 @@ export class TypeormUsersRepository implements IUserRepository {
     roleId: true,
     firstName: true,
     lastName: true,
-    email: true
+    email: true,
   };
 
   constructor(
@@ -29,7 +29,7 @@ export class TypeormUsersRepository implements IUserRepository {
   async findAll(): Promise<User[]> {
     return await this.repository.find({
       relations: ['role'],
-      select: this.defaultSelect
+      select: this.defaultSelect,
     });
   }
 
@@ -37,15 +37,16 @@ export class TypeormUsersRepository implements IUserRepository {
     return await this.repository.findOne({
       where: { id },
       relations: ['role'],
-      select: this.defaultSelect
+      select: this.defaultSelect,
     });
   }
 
   async findByEmail(email: string): Promise<User | null> {
     return await this.repository.findOne({
       where: { email },
-      relations: ['role'],
-      select: this.defaultSelect
+      //TODO: Descomentar luego de terminar autenticación
+      // relations: ['role'],
+      // select: this.defaultSelect
     });
   }
 
