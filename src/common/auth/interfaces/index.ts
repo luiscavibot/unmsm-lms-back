@@ -1,12 +1,6 @@
 import { Request } from 'express';
+import { User } from 'src/modules/users/entities/user.entity';
 
 export interface AuthenticatedRequest extends Request {
-  user: {
-    id: string;
-    roleId: string | null;
-    firstName: string;
-    lastName: string;
-    email: string;
-    role?: string;
-  };
+  user: User;
 }
