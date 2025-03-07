@@ -6,6 +6,10 @@ import { ProgramsModule } from './modules/programs/programs.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './common/auth/auth.module';
+import { CourseModule } from './modules/courses/course.module';
+import { ProgramCourseModule } from './modules/program-courses/program-course.module';
+import { ClassSessionModule } from './modules/class-sessions/class-session.module';
+import { EnrollmentModule } from './modules/enrollments/enrollment.module';
 
 @Module({
   imports: [
@@ -18,6 +22,10 @@ import { AuthModule } from './common/auth/auth.module';
     RolesModule,
     UsersModule,
     AuthModule,
+    CourseModule,
+    ProgramCourseModule,
+    ClassSessionModule,
+    EnrollmentModule,
   ],
 })
 export class AppModule {}
