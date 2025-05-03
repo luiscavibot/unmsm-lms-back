@@ -12,6 +12,7 @@ import { ClassSessionModule } from './modules/class-sessions/class-session.modul
 import { EnrollmentModule } from './modules/enrollments/enrollment.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { MaterialModule } from './modules/materials/material.module';
+import { SemestersModule } from './modules/semesters/semesters.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MaterialModule } from './modules/materials/material.module';
     EnrollmentModule,
     AttendanceModule,
     MaterialModule,
+    SemestersModule,
   ],
 })
 export class AppModule {}
