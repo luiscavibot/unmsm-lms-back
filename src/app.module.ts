@@ -7,7 +7,7 @@ import { RolesModule } from './modules/roles/roles.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './common/auth/auth.module';
 import { CourseModule } from './modules/courses/course.module';
-import { ProgramCourseModule } from './modules/program-courses/program-course.module';
+import { CourseOfferingModule } from './modules/course-offerings/course-offering.module';
 import { ClassSessionModule } from './modules/class-sessions/class-session.module';
 import { EnrollmentModule } from './modules/enrollments/enrollment.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
@@ -26,7 +26,7 @@ import { SemestersModule } from './modules/semesters/semesters.module';
     UsersModule,
     AuthModule,
     CourseModule,
-    ProgramCourseModule,
+    CourseOfferingModule,
     ClassSessionModule,
     EnrollmentModule,
     AttendanceModule,
