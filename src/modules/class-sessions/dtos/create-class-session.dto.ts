@@ -4,7 +4,7 @@ import { Transform } from 'class-transformer';
 
 export class CreateClassSessionDto {
   @ApiProperty({
-    description: 'ID of the program course',
+    description: 'ID of the course offering',
     example: '123e4567-e89b-12d3-a456-426614174000'
   })
   @IsUUID()
