@@ -7,6 +7,12 @@ export class Program {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @ManyToOne(() => Faculty, { onDelete: 'SET NULL' })
+  faculty: Faculty;
+
+  @Column({ nullable: true })
+  facultyId: string;
+
   @Column({ length: 100 })
   name: string;
 
@@ -16,10 +22,4 @@ export class Program {
     default: ProgramType.Pregrado
   })
   type: ProgramType;
-
-  @ManyToOne(() => Faculty, { onDelete: 'SET NULL' })
-  faculty: Faculty;
-
-  @Column({ nullable: true })
-  facultyId: string;
 }
