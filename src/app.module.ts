@@ -14,6 +14,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { MaterialModule } from './modules/materials/material.module';
 import { SemestersModule } from './modules/semesters/semesters.module';
 import { BlockAssignmentsModule } from './modules/block-assignments/block-assignments.module';
+import { BlocksModule } from './modules/blocks/blocks.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { BlockAssignmentsModule } from './modules/block-assignments/block-assign
     MaterialModule,
     SemestersModule,
     BlockAssignmentsModule,
+    BlocksModule,
   ],
 })
 export class AppModule {}

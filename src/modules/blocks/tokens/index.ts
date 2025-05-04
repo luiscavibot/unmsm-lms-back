@@ -1,0 +1,1 @@
+export const BLOCK_REPOSITORY = Symbol('BLOCK_REPOSITORY');

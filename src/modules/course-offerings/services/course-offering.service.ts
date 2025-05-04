@@ -1,9 +1,9 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CourseOffering } from '../entities/course-offering.entity';
-import { ICourseOfferingRepository } from '../interfaces/course-offering.repository.interface';
 import { CreateCourseOfferingDto } from '../dtos/create-course-offering.dto';
 import { UpdateCourseOfferingDto } from '../dtos/update-course-offering.dto';
-import { COURSE_OFFERING_REPOSITORY } from '../tokens';
+import { COURSE_OFFERING_REPOSITORY } from '../tokens/index';
+import { ICourseOfferingRepository } from '../interfaces/course-offering.repository.interface';
 import { ProgramService } from 'src/modules/programs/services/program.service';
 import { CourseService } from 'src/modules/courses/services/course.service';
 import { SemesterService } from 'src/modules/semesters/services/semester.service';
