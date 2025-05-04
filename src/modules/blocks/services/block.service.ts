@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { BlockRepository } from '../interfaces/block-repository.interface';
-import { BLOCK_REPOSITORY } from '../tokens';
+import { BLOCK_REPOSITORY } from '../tokens/index';
 import { Block } from '../entities/block.entity';
 import { CreateBlockDto } from '../dtos/create-block.dto';
 import { UpdateBlockDto } from '../dtos/update-block.dto';

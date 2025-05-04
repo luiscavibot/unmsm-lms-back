@@ -1,1 +1,0 @@
-export const BLOCK_REPOSITORY = 'BLOCK_REPOSITORY';
