@@ -15,14 +15,14 @@ export class TypeormEnrollmentsRepository implements IEnrollmentRepository {
 
   async findAll(): Promise<Enrollment[]> {
     return await this.enrollmentRepository.find({
-      relations: ['user', 'programCourse'],
+      relations: ['user', 'courseOffering'],
     });
   }
 
   async findOne(id: string): Promise<Enrollment | null> {
     return await this.enrollmentRepository.findOne({
       where: { id },
-      relations: ['user', 'programCourse'],
+      relations: ['user', 'courseOffering'],
     });
   }
 
