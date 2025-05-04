@@ -13,6 +13,7 @@ import { EnrollmentModule } from './modules/enrollments/enrollment.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { MaterialModule } from './modules/materials/material.module';
 import { SemestersModule } from './modules/semesters/semesters.module';
+import { BlockAssignmentsModule } from './modules/block-assignments/block-assignments.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SemestersModule } from './modules/semesters/semesters.module';
     AttendanceModule,
     MaterialModule,
     SemestersModule,
+    BlockAssignmentsModule,
   ],
 })
 export class AppModule {}
