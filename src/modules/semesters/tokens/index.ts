@@ -1,0 +1,1 @@
+export const SEMESTER_REPOSITORY = Symbol('SEMESTER_REPOSITORY');
