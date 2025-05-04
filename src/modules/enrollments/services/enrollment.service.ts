@@ -5,7 +5,7 @@ import { CreateEnrollmentDto } from '../dtos/create-enrollment.dto';
 import { UpdateEnrollmentDto } from '../dtos/update-enrollment.dto';
 import { ENROLLMENT_REPOSITORY } from '../tokens';
 import { UserService } from 'src/modules/users/services/user.service';
-import { ProgramCourseService } from 'src/modules/program-courses/services/program-course.service';
+import { CourseOfferingService } from 'src/modules/course-offerings/services/course-offering.service';
 
 @Injectable()
 export class EnrollmentService {
@@ -13,12 +13,12 @@ export class EnrollmentService {
     @Inject(ENROLLMENT_REPOSITORY)
     private readonly enrollmentRepository: IEnrollmentRepository,
     private readonly userService: UserService,
-    private readonly programCourseService: ProgramCourseService,
+    private readonly courseOfferingService: CourseOfferingService,
   ) {}
 
   async create(createEnrollmentDto: CreateEnrollmentDto): Promise<Enrollment> {
     await this.userService.findOne(createEnrollmentDto.userId);
-    await this.programCourseService.findOne(createEnrollmentDto.programCourseId);
+    await this.courseOfferingService.findOne(createEnrollmentDto.programCourseId);
     return await this.enrollmentRepository.create(createEnrollmentDto as Enrollment);
   }
 
@@ -40,7 +40,7 @@ export class EnrollmentService {
       await this.userService.findOne(updateEnrollmentDto.userId);
     }
     if (updateEnrollmentDto.programCourseId) {
-      await this.programCourseService.findOne(updateEnrollmentDto.programCourseId);
+      await this.courseOfferingService.findOne(updateEnrollmentDto.programCourseId);
     }
     return await this.enrollmentRepository.update(id, updateEnrollmentDto);
   }

@@ -6,13 +6,13 @@ import { EnrollmentService } from './services/enrollment.service';
 import { TypeormEnrollmentsRepository } from './repositories/typeorm-enrollments.repository';
 import { ENROLLMENT_REPOSITORY } from './tokens';
 import { UsersModule } from '../users/users.module';
-import { ProgramCourseModule } from '../program-courses/program-course.module';
+import { CourseOfferingModule } from '../course-offerings/course-offering.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Enrollment]),
     UsersModule,
-    ProgramCourseModule,
+    CourseOfferingModule,
   ],
   controllers: [EnrollmentController],
   providers: [

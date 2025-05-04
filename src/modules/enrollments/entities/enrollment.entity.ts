@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { ProgramCourse } from '../../program-courses/entities/program-course.entity';
+import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
 
 @Entity({ name: 'enrollments' })
 export class Enrollment {
@@ -13,8 +13,8 @@ export class Enrollment {
   @Column({ nullable: true })
   userId: string;
 
-  @ManyToOne(() => ProgramCourse, { onDelete: 'SET NULL' })
-  programCourse: ProgramCourse;
+  @ManyToOne(() => CourseOffering, { onDelete: 'SET NULL' })
+  programCourse: CourseOffering;
 
   @Column({ nullable: true })
   programCourseId: string;

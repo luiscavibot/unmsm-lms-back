@@ -1,5 +1,5 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { ProgramCourse } from '../../program-courses/entities/program-course.entity';
+import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
 
 @Entity({ name: 'class_sessions' })
 export class ClassSession {
@@ -21,6 +21,6 @@ export class ClassSession {
   @Column({ nullable: true })
   virtualRoomUrl: string;
 
-  @ManyToOne(() => ProgramCourse, { onDelete: 'SET NULL' })
-  programCourse: ProgramCourse;
+  @ManyToOne(() => CourseOffering, { onDelete: 'SET NULL' })
+  programCourse: CourseOffering;
 }
