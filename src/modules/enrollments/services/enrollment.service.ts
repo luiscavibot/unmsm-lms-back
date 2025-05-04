@@ -18,7 +18,7 @@ export class EnrollmentService {
 
   async create(createEnrollmentDto: CreateEnrollmentDto): Promise<Enrollment> {
     await this.userService.findOne(createEnrollmentDto.userId);
-    await this.courseOfferingService.findOne(createEnrollmentDto.programCourseId);
+    await this.courseOfferingService.findOne(createEnrollmentDto.courseOfferingId);
     return await this.enrollmentRepository.create(createEnrollmentDto as Enrollment);
   }
 
@@ -39,8 +39,8 @@ export class EnrollmentService {
     if (updateEnrollmentDto.userId) {
       await this.userService.findOne(updateEnrollmentDto.userId);
     }
-    if (updateEnrollmentDto.programCourseId) {
-      await this.courseOfferingService.findOne(updateEnrollmentDto.programCourseId);
+    if (updateEnrollmentDto.courseOfferingId) {
+      await this.courseOfferingService.findOne(updateEnrollmentDto.courseOfferingId);
     }
     return await this.enrollmentRepository.update(id, updateEnrollmentDto);
   }

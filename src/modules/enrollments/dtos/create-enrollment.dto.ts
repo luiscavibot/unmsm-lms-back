@@ -16,5 +16,5 @@ export class CreateEnrollmentDto {
     description: 'ID de la oferta de curso',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  programCourseId: string;
+  courseOfferingId: string;
 }

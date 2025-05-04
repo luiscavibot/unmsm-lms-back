@@ -14,11 +14,14 @@ export class Enrollment {
   userId: string;
 
   @ManyToOne(() => CourseOffering, { onDelete: 'SET NULL' })
-  programCourse: CourseOffering;
+  courseOffering: CourseOffering;
 
   @Column({ nullable: true })
-  programCourseId: string;
+  courseOfferingId: string;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   enrollmentDate: Date;
+
+  @Column({ type: 'float', nullable: true })
+  finalAverage: number;
 }
