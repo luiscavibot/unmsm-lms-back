@@ -4,18 +4,18 @@ import { IClassSessionRepository } from '../interfaces/class-session.repository.
 import { CreateClassSessionDto } from '../dtos/create-class-session.dto';
 import { UpdateClassSessionDto } from '../dtos/update-class-session.dto';
 import { CLASS_SESSION_REPOSITORY } from '../tokens';
-import { ProgramCourseService } from 'src/modules/program-courses/services/program-course.service';
+import { CourseOfferingService } from 'src/modules/course-offerings/services/course-offering.service';
 
 @Injectable()
 export class ClassSessionService {
   constructor(
     @Inject(CLASS_SESSION_REPOSITORY)
     private readonly classSessionRepository: IClassSessionRepository,
-    private readonly programCourseService: ProgramCourseService
+    private readonly courseOfferingService: CourseOfferingService
   ) {}
 
   async create(createClassSessionDto: CreateClassSessionDto): Promise<ClassSession> {
-    await this.programCourseService.findOne(createClassSessionDto.programCourseId);
+    await this.courseOfferingService.findOne(createClassSessionDto.programCourseId);
     return await this.classSessionRepository.create(createClassSessionDto as ClassSession);
   }
 
@@ -34,7 +34,7 @@ export class ClassSessionService {
   async update(id: string, updateClassSessionDto: UpdateClassSessionDto): Promise<ClassSession | null> {
     await this.findOne(id);
     if (updateClassSessionDto.programCourseId) {
-      await this.programCourseService.findOne(updateClassSessionDto.programCourseId);
+      await this.courseOfferingService.findOne(updateClassSessionDto.programCourseId);
     }
     return await this.classSessionRepository.update(id, updateClassSessionDto);
   }
