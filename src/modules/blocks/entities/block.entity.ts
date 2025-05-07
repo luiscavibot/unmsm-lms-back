@@ -8,10 +8,10 @@ export class Block {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => CourseOffering, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CourseOffering, { onDelete: 'SET NULL' })
   courseOffering: CourseOffering;
 
-  @Column({ nullable: false })
+  @Column({ nullable: true })
   courseOfferingId: string;
 
   @ManyToOne(() => BlockAssignment, { onDelete: 'SET NULL' })

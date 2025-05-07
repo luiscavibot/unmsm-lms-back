@@ -16,6 +16,7 @@ import { SemestersModule } from './modules/semesters/semesters.module';
 import { BlockAssignmentsModule } from './modules/block-assignments/block-assignments.module';
 import { BlocksModule } from './modules/blocks/blocks.module';
 import { EnrollmentBlockModule } from './modules/enrollment-blocks/enrollment-block.module';
+import { EvaluationsModule } from './modules/evaluations/evaluations.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { EnrollmentBlockModule } from './modules/enrollment-blocks/enrollment-bl
     BlockAssignmentsModule,
     BlocksModule,
     EnrollmentBlockModule,
+    EvaluationsModule,
   ],
 })
 export class AppModule {}
