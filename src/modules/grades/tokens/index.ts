@@ -1,0 +1,1 @@
+export const GRADE_REPOSITORY = Symbol('GRADE_REPOSITORY');
