@@ -34,11 +34,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, StrategyType.JWT) {
 
   async validate(payload: CognitoJwtPayload) {
     if (!payload.sub) throw new UnauthorizedException('Invalid token');
-
+    console.log('payload', payload);
     return {
       userId: payload.sub,
-      // groups: payload['cognito:groups'] ?? [],
-      // rolId: payload['cognito:groups']?.[0] ?? null,
+      rolName: payload['cognito:groups']?.[0] ?? null,
     };
   }
 }
