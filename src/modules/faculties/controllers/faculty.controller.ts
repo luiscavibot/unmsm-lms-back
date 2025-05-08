@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Delete, Body, Param, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Patch, Req } from '@nestjs/common';
 import { FacultyService } from '../services/faculty.service';
 import { Faculty } from '../entities/faculty.entity';
 import { CreateFacultyDto } from '../dtos/create-faculty.dto';
 import { UpdateFacultyDto } from '../dtos/update-faculty.dto';
 import { ApiOperation } from '@nestjs/swagger';
+import { CurrentUser } from 'src/common/auth/decorators/current-user.decorator';
 
 @Controller('faculties')
 export class FacultyController {
@@ -17,7 +18,8 @@ export class FacultyController {
 
   @Get()
   @ApiOperation({ summary: 'Get all faculties' })
-  async findAll(): Promise<Faculty[]> {
+  async findAll(@CurrentUser('userId') userId: string): Promise<Faculty[]> {
+    console.log('Current User ID:', userId);
     return await this.facultyService.findAll();
   }
 
