@@ -16,7 +16,6 @@ export class UserController {
     return await this.userService.create(createUserDto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'Get all users' })
   async findAll(): Promise<User[]> {
