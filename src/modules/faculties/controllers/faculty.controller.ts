@@ -4,7 +4,8 @@ import { Faculty } from '../entities/faculty.entity';
 import { CreateFacultyDto } from '../dtos/create-faculty.dto';
 import { UpdateFacultyDto } from '../dtos/update-faculty.dto';
 import { ApiOperation } from '@nestjs/swagger';
-import { CurrentUser } from 'src/common/auth/decorators/current-user.decorator';
+import { CurrentUserToken } from 'src/common/auth/decorators/current-user.decorator';
+import { UserPayload } from 'src/common/auth/interfaces';
 
 @Controller('faculties')
 export class FacultyController {
@@ -18,8 +19,9 @@ export class FacultyController {
 
   @Get()
   @ApiOperation({ summary: 'Get all faculties' })
-  async findAll(@CurrentUser('userId') userId: string): Promise<Faculty[]> {
-    console.log('Current User ID:', userId);
+  async findAll(@CurrentUserToken() token: UserPayload): Promise<Faculty[]> {
+    console.log('Current User ID:', token.userId);
+    console.log('Current User Role Name:', token.rolName);
     return await this.facultyService.findAll();
   }
 
