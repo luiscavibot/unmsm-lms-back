@@ -5,6 +5,7 @@ import { CreateSemesterDto } from '../dtos/create-semester.dto';
 import { UpdateSemesterDto } from '../dtos/update-semester.dto';
 import { Semester } from '../entities/semester.entity';
 
+@ApiTags('Semestres')
 @Controller('semesters')
 export class SemesterController {
   constructor(private readonly semesterService: SemesterService) {}
