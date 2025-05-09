@@ -37,4 +37,9 @@ export class SemesterService {
     await this.findOne(id);
     await this.semesterRepository.delete(id);
   }
+
+  async findByUserId(userId: string): Promise<Semester[]> {
+    const currentYear = new Date().getFullYear();
+    return await this.semesterRepository.findByUserId(userId, currentYear);
+  }
 }
