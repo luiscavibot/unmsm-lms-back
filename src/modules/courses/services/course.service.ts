@@ -4,6 +4,8 @@ import { ICourseRepository } from '../interfaces/course.repository.interface';
 import { CreateCourseDto } from '../dtos/create-course.dto';
 import { UpdateCourseDto } from '../dtos/update-course.dto';
 import { COURSE_REPOSITORY } from '../tokens';
+import { CoursesByProgramTypeDto } from '../dtos/courses-by-program-type.dto';
+import { CoursesByProgramTypeResponseDto } from '../dtos/courses-by-program-type-response.dto';
 
 @Injectable()
 export class CourseService {
@@ -36,5 +38,9 @@ export class CourseService {
   async remove(id: string): Promise<void> {
     await this.findOne(id);
     await this.courseRepository.delete(id);
+  }
+  
+  async findCoursesByProgramType(userId: string, filters: CoursesByProgramTypeDto): Promise<CoursesByProgramTypeResponseDto> {
+    return await this.courseRepository.findCoursesByProgramType(userId, filters);
   }
 }
