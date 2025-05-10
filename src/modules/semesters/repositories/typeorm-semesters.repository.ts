@@ -33,4 +33,23 @@ export class TypeormSemestersRepository implements ISemesterRepository {
   async delete(id: string): Promise<void> {
     await this.semesterRepository.delete(id);
   }
+
+  async findByUserId(userId: string, currentYear?: number): Promise<Semester[]> {
+    const actualYear = currentYear || new Date().getFullYear();
+    const lastYear = actualYear - 1;
+    
+    return await this.semesterRepository
+      .createQueryBuilder('semester')
+      .distinct(true)
+      .innerJoin('course_offerings', 'co', 'co.semesterId = semester.id')
+      .innerJoin('enrollments', 'e', 'e.courseOfferingId = co.id')
+      .where('e.userId = :userId', { userId })
+      .andWhere('semester.year >= :lastYear AND semester.year <= :actualYear', { 
+        lastYear,
+        actualYear 
+      })
+      .orderBy('semester.year', 'DESC')
+      .addOrderBy('semester.name', 'DESC')
+      .getMany();
+  }
 }
