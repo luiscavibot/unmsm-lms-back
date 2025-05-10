@@ -11,13 +11,9 @@ export class BlockController {
   @Get()
   async findAll(
     @Query('courseOfferingId') courseOfferingId?: string,
-    @Query('blockAssignmentId') blockAssignmentId?: string,
   ): Promise<Block[]> {
     if (courseOfferingId) {
       return this.blockService.findByCourseOfferingId(courseOfferingId);
-    }
-    if (blockAssignmentId) {
-      return this.blockService.findByBlockAssignmentId(blockAssignmentId);
     }
     return this.blockService.findAll();
   }

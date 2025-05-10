@@ -18,30 +18,47 @@ export class TypeormBlockAssignmentsRepository implements IBlockAssignmentReposi
 
   async findAll(): Promise<BlockAssignment[]> {
     return await this.repository.find({
-      relations: ['user'],
+      relations: ['user', 'block', 'courseOffering'],
     });
   }
 
-  async findOne(id: string): Promise<BlockAssignment | null> {
+  async findByCompositeId(userId: string, blockId: string, courseOfferingId: string): Promise<BlockAssignment | null> {
     return await this.repository.findOne({
-      where: { id },
-      relations: ['user'],
+      where: { userId, blockId, courseOfferingId },
+      relations: ['user', 'block', 'courseOffering'],
     });
   }
 
   async findByUserId(userId: string): Promise<BlockAssignment[]> {
     return await this.repository.find({
       where: { userId },
-      relations: ['user'],
+      relations: ['user', 'block', 'courseOffering'],
     });
   }
 
-  async update(id: string, blockAssignment: Partial<BlockAssignment>): Promise<BlockAssignment | null> {
-    await this.repository.update(id, blockAssignment);
-    return this.findOne(id);
+  async findByBlockId(blockId: string): Promise<BlockAssignment[]> {
+    return await this.repository.find({
+      where: { blockId },
+      relations: ['user', 'block', 'courseOffering'],
+    });
   }
 
-  async delete(id: string): Promise<void> {
-    await this.repository.delete(id);
+  async findByCourseOfferingId(courseOfferingId: string): Promise<BlockAssignment[]> {
+    return await this.repository.find({
+      where: { courseOfferingId },
+      relations: ['user', 'block', 'courseOffering'],
+    });
+  }
+
+  async update(userId: string, blockId: string, courseOfferingId: string, blockAssignment: Partial<BlockAssignment>): Promise<BlockAssignment | null> {
+    await this.repository.update(
+      { userId, blockId, courseOfferingId },
+      blockAssignment
+    );
+    return this.findByCompositeId(userId, blockId, courseOfferingId);
+  }
+
+  async delete(userId: string, blockId: string, courseOfferingId: string): Promise<void> {
+    await this.repository.delete({ userId, blockId, courseOfferingId });
   }
 }

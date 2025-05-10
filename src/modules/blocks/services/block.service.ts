@@ -28,10 +28,6 @@ export class BlockService {
     return this.blockRepository.findByCourseOfferingId(courseOfferingId);
   }
 
-  async findByBlockAssignmentId(blockAssignmentId: string): Promise<Block[]> {
-    return this.blockRepository.findByBlockAssignmentId(blockAssignmentId);
-  }
-
   async create(createBlockDto: CreateBlockDto): Promise<Block> {
     return this.blockRepository.create(createBlockDto);
   }
