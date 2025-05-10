@@ -3,6 +3,7 @@ import { UserService } from '../services/user.service';
 import { User } from '../entities/user.entity';
 import { CreateUserDto } from '../dtos/create-user.dto';
 import { UpdateUserDto } from '../dtos/update-user.dto';
+import { UpdateProfileImageDto } from '../dtos/update-profile-image.dto';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/auth/guards/jwt-auth.guard';
 
@@ -38,5 +39,14 @@ export class UserController {
   @ApiOperation({ summary: 'Delete a user' })
   async remove(@Param('id') id: string): Promise<void> {
     return await this.userService.remove(id);
+  }
+
+  @Patch(':id/profile-image')
+  @ApiOperation({ summary: 'Update user profile image' })
+  async updateProfileImage(
+    @Param('id') id: string, 
+    @Body() updateProfileImageDto: UpdateProfileImageDto
+  ): Promise<User | null> {
+    return await this.userService.updateProfileImage(id, updateProfileImageDto.imgUrl);
   }
 }
