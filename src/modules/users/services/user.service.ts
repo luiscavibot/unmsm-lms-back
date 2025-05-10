@@ -83,4 +83,9 @@ export class UserService {
     await this.findOne(id);
     return this.userRepository.delete(id);
   }
+
+  async updateProfileImage(id: string, imgUrl: string): Promise<User | null> {
+    await this.findOne(id);
+    return this.userRepository.update(id, { imgUrl });
+  }
 }

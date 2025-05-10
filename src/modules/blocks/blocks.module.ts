@@ -6,13 +6,11 @@ import { BlockService } from './services/block.service';
 import { BLOCK_REPOSITORY } from './tokens/index';
 import { TypeormBlocksRepository } from './repositories/typeorm-blocks.repository';
 import { CourseOfferingModule } from '../course-offerings/course-offering.module';
-import { BlockAssignmentsModule } from '../block-assignments/block-assignments.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Block]),
     CourseOfferingModule,
-    BlockAssignmentsModule
   ],
   controllers: [BlockController],
   providers: [

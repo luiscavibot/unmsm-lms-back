@@ -25,10 +25,10 @@ export class BlockAssignmentService {
     return await this.blockAssignmentRepository.findAll();
   }
 
-  async findOne(id: string): Promise<BlockAssignment> {
-    const blockAssignment = await this.blockAssignmentRepository.findOne(id);
+  async findByCompositeId(userId: string, blockId: string, courseOfferingId: string): Promise<BlockAssignment> {
+    const blockAssignment = await this.blockAssignmentRepository.findByCompositeId(userId, blockId, courseOfferingId);
     if (!blockAssignment) {
-      throw new NotFoundException(`Asignación de bloque con id ${id} no encontrada`);
+      throw new NotFoundException(`Asignación de bloque no encontrada`);
     }
     return blockAssignment;
   }
@@ -40,19 +40,27 @@ export class BlockAssignmentService {
     return await this.blockAssignmentRepository.findByUserId(userId);
   }
 
-  async update(id: string, updateBlockAssignmentDto: UpdateBlockAssignmentDto): Promise<BlockAssignment | null> {
-    await this.findOne(id);
+  async findByBlockId(blockId: string): Promise<BlockAssignment[]> {
+    return await this.blockAssignmentRepository.findByBlockId(blockId);
+  }
+
+  async findByCourseOfferingId(courseOfferingId: string): Promise<BlockAssignment[]> {
+    return await this.blockAssignmentRepository.findByCourseOfferingId(courseOfferingId);
+  }
+
+  async update(userId: string, blockId: string, courseOfferingId: string, updateBlockAssignmentDto: UpdateBlockAssignmentDto): Promise<BlockAssignment | null> {
+    await this.findByCompositeId(userId, blockId, courseOfferingId);
     
     if (updateBlockAssignmentDto.userId) {
       // Verificar que el usuario existe
       await this.userService.findOne(updateBlockAssignmentDto.userId);
     }
     
-    return this.blockAssignmentRepository.update(id, updateBlockAssignmentDto);
+    return this.blockAssignmentRepository.update(userId, blockId, courseOfferingId, updateBlockAssignmentDto);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
-    return this.blockAssignmentRepository.delete(id);
+  async remove(userId: string, blockId: string, courseOfferingId: string): Promise<void> {
+    await this.findByCompositeId(userId, blockId, courseOfferingId);
+    return this.blockAssignmentRepository.delete(userId, blockId, courseOfferingId);
   }
 }

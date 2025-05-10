@@ -12,6 +12,7 @@ export class TypeormUsersRepository implements IUserRepository {
     firstName: true,
     lastName: true,
     email: true,
+    imgUrl: true,
   };
 
   constructor(

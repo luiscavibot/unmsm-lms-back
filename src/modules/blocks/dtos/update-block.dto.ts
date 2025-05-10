@@ -7,10 +7,6 @@ export class UpdateBlockDto {
   courseOfferingId?: string;
 
   @IsOptional()
-  @IsUUID()
-  blockAssignmentId?: string;
-
-  @IsOptional()
   @IsEnum(BlockType)
   type?: BlockType;
 

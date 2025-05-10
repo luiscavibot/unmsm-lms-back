@@ -38,4 +38,13 @@ export class CreateUserDto {
   @IsString()
   @MinLength(6)
   password: string;
+
+  @ApiProperty({
+    description: 'URL de la imagen de perfil del usuario',
+    example: 'https://example.com/profile.jpg',
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  imgUrl?: string;
 }

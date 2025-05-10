@@ -13,28 +13,21 @@ export class TypeormBlocksRepository implements BlockRepository {
 
   async findAll(): Promise<Block[]> {
     return this.blockRepository.find({
-      relations: ['courseOffering', 'blockAssignment'],
+      relations: ['courseOffering'],
     });
   }
 
   async findById(id: string): Promise<Block | null> {
     return this.blockRepository.findOne({
       where: { id },
-      relations: ['courseOffering', 'blockAssignment'],
+      relations: ['courseOffering'],
     });
   }
 
   async findByCourseOfferingId(courseOfferingId: string): Promise<Block[]> {
     return this.blockRepository.find({
       where: { courseOfferingId },
-      relations: ['courseOffering', 'blockAssignment'],
-    });
-  }
-
-  async findByBlockAssignmentId(blockAssignmentId: string): Promise<Block[]> {
-    return this.blockRepository.find({
-      where: { blockAssignmentId },
-      relations: ['courseOffering', 'blockAssignment'],
+      relations: ['courseOffering'],
     });
   }
 

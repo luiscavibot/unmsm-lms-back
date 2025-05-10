@@ -1,17 +1,28 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Block } from '../../blocks/entities/block.entity';
+import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
 import { BlockRolType } from '../enums/block-rol-type.enum';
 
 @Entity({ name: 'block_assignments' })
 export class BlockAssignment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryColumn()
+  userId: string;
 
-  @ManyToOne(() => User, { onDelete: 'SET NULL' })
+  @PrimaryColumn()
+  blockId: string;
+
+  @PrimaryColumn()
+  courseOfferingId: string;
+
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
   user: User;
 
-  @Column({ nullable: true })
-  userId: string;
+  @ManyToOne(() => Block, { onDelete: 'CASCADE' })
+  block: Block;
+
+  @ManyToOne(() => CourseOffering, { onDelete: 'CASCADE' })
+  courseOffering: CourseOffering;
 
   @Column({
     type: 'enum',

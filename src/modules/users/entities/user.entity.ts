@@ -23,6 +23,9 @@ export class User {
   @Exclude()
   password?: string;
 
+  @Column({ nullable: true })
+  imgUrl?: string;
+
   @ManyToOne(() => Role, { onDelete: 'SET NULL' })
   role: Role;
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
 import { BlockAssignmentService } from '../services/block-assignment.service';
 import { BlockAssignment } from '../entities/block-assignment.entity';
 import { CreateBlockAssignmentDto } from '../dtos/create-block-assignment.dto';
@@ -20,38 +20,54 @@ export class BlockAssignmentController {
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Obtener todas las asignaciones de bloque' })
-  async findAll(): Promise<BlockAssignment[]> {
+  async findAll(
+    @Query('userId') userId?: string,
+    @Query('blockId') blockId?: string,
+    @Query('courseOfferingId') courseOfferingId?: string,
+  ): Promise<BlockAssignment[]> {
+    if (userId) {
+      return await this.blockAssignmentService.findByUserId(userId);
+    }
+    if (blockId) {
+      return await this.blockAssignmentService.findByBlockId(blockId);
+    }
+    if (courseOfferingId) {
+      return await this.blockAssignmentService.findByCourseOfferingId(courseOfferingId);
+    }
     return await this.blockAssignmentService.findAll();
   }
 
-  @Get(':id')
+  @Get('composite/:userId/:blockId/:courseOfferingId')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Obtener una asignación de bloque por id' })
-  async findOne(@Param('id') id: string): Promise<BlockAssignment> {
-    return await this.blockAssignmentService.findOne(id);
+  @ApiOperation({ summary: 'Obtener una asignación de bloque por clave compuesta' })
+  async findByCompositeId(
+    @Param('userId') userId: string,
+    @Param('blockId') blockId: string,
+    @Param('courseOfferingId') courseOfferingId: string
+  ): Promise<BlockAssignment> {
+    return await this.blockAssignmentService.findByCompositeId(userId, blockId, courseOfferingId);
   }
 
-  @Get('user/:userId')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Obtener asignaciones de bloque por id de usuario' })
-  async findByUserId(@Param('userId') userId: string): Promise<BlockAssignment[]> {
-    return await this.blockAssignmentService.findByUserId(userId);
-  }
-
-  @Patch(':id')
+  @Patch(':userId/:blockId/:courseOfferingId')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Actualizar una asignación de bloque' })
   async update(
-    @Param('id') id: string, 
+    @Param('userId') userId: string,
+    @Param('blockId') blockId: string,
+    @Param('courseOfferingId') courseOfferingId: string,
     @Body() updateBlockAssignmentDto: UpdateBlockAssignmentDto
   ): Promise<BlockAssignment | null> {
-    return await this.blockAssignmentService.update(id, updateBlockAssignmentDto);
+    return await this.blockAssignmentService.update(userId, blockId, courseOfferingId, updateBlockAssignmentDto);
   }
 
-  @Delete(':id')
+  @Delete(':userId/:blockId/:courseOfferingId')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Eliminar una asignación de bloque' })
-  async remove(@Param('id') id: string): Promise<void> {
-    return await this.blockAssignmentService.remove(id);
+  async remove(
+    @Param('userId') userId: string,
+    @Param('blockId') blockId: string,
+    @Param('courseOfferingId') courseOfferingId: string
+  ): Promise<void> {
+    return await this.blockAssignmentService.remove(userId, blockId, courseOfferingId);
   }
 }

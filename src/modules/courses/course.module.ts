@@ -5,9 +5,19 @@ import { CourseController } from './controllers/course.controller';
 import { CourseService } from './services/course.service';
 import { TypeormCoursesRepository } from './repositories/typeorm-courses.repository';
 import { COURSE_REPOSITORY } from './tokens';
+import { Enrollment } from '../enrollments/entities/enrollment.entity';
+import { BlockAssignment } from '../block-assignments/entities/block-assignment.entity';
+import { Block } from '../blocks/entities/block.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Course])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Course, 
+      Enrollment, 
+      BlockAssignment, 
+      Block, 
+    ])
+  ],
   controllers: [CourseController],
   providers: [
     CourseService,

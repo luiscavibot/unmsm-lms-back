@@ -1,9 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CourseService } from '../services/course.service';
 import { CreateCourseDto } from '../dtos/create-course.dto';
 import { UpdateCourseDto } from '../dtos/update-course.dto';
 import { Course } from '../entities/course.entity';
+import { CoursesByProgramTypeDto } from '../dtos/courses-by-program-type.dto';
+import { CoursesByProgramTypeResponseDto } from '../dtos/courses-by-program-type-response.dto';
+import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
+import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
+import { UserPayload } from '../../../common/auth/interfaces';
 
 @Controller('courses')
 export class CourseController {
@@ -19,6 +24,24 @@ export class CourseController {
   @ApiOperation({ summary: 'Get all courses' })
   async findAll(): Promise<Course[]> {
     return await this.courseService.findAll();
+  }
+
+  @Get('by-program-type')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ 
+    summary: 'Obtener cursos agrupados por programa',
+    description: 'Devuelve los cursos en los que el usuario está matriculado, agrupados por programa académico. Permite filtrado por tipo de programa, estado, semestre y búsqueda por texto.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de cursos agrupados por programa académico',
+    type: CoursesByProgramTypeResponseDto
+  })
+  async findCoursesByProgramType(
+    @CurrentUserToken() user: UserPayload,
+    @Query() filters: CoursesByProgramTypeDto
+  ): Promise<CoursesByProgramTypeResponseDto> {
+    return await this.courseService.findCoursesByProgramType(user.userId, filters);
   }
 
   @Get(':id')
