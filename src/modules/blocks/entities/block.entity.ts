@@ -22,4 +22,10 @@ export class Block {
 
   @Column({ length: 50, nullable: true })
   group: string;
+
+  @Column({ length: 50, nullable: true })
+  classroomNumber: string;
+
+  @Column({ type: 'text', nullable: true })
+  syllabusUrl: string;
 }

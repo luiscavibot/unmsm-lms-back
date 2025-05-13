@@ -1,16 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
-import { BlockType } from '../enums/block-type.enum';
+import { PartialType } from '@nestjs/swagger';
+import { CreateBlockDto } from './create-block.dto';
 
-export class UpdateBlockDto {
-  @IsOptional()
-  @IsUUID()
-  courseOfferingId?: string;
-
-  @IsOptional()
-  @IsEnum(BlockType)
-  type?: BlockType;
-
-  @IsOptional()
-  @IsString()
-  group?: string;
-}
+export class UpdateBlockDto extends PartialType(CreateBlockDto) {}
