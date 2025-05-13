@@ -4,23 +4,44 @@ import { IClassSessionRepository } from '../interfaces/class-session.repository.
 import { CreateClassSessionDto } from '../dtos/create-class-session.dto';
 import { UpdateClassSessionDto } from '../dtos/update-class-session.dto';
 import { CLASS_SESSION_REPOSITORY } from '../tokens';
-import { CourseOfferingService } from 'src/modules/course-offerings/services/course-offering.service';
+import { BlockService } from 'src/modules/blocks/services/block.service';
+import { WeekService } from 'src/modules/weeks/services/week.service';
 
 @Injectable()
 export class ClassSessionService {
   constructor(
     @Inject(CLASS_SESSION_REPOSITORY)
     private readonly classSessionRepository: IClassSessionRepository,
-    private readonly courseOfferingService: CourseOfferingService
+    private readonly blockService: BlockService,
+    private readonly weekService: WeekService
   ) {}
 
   async create(createClassSessionDto: CreateClassSessionDto): Promise<ClassSession> {
-    await this.courseOfferingService.findOne(createClassSessionDto.programCourseId);
+    // Verificar que el bloque existe
+    await this.blockService.findById(createClassSessionDto.blockId);
+    
+    // Verificar que la semana existe
+    await this.weekService.findById(createClassSessionDto.weekId);
+    
     return await this.classSessionRepository.create(createClassSessionDto as ClassSession);
   }
 
   async findAll(): Promise<ClassSession[]> {
     return await this.classSessionRepository.findAll();
+  }
+
+  async findByBlockId(blockId: string): Promise<ClassSession[]> {
+    // Verificar que el bloque existe
+    await this.blockService.findById(blockId);
+    
+    return await this.classSessionRepository.findByBlockId(blockId);
+  }
+
+  async findByWeekId(weekId: string): Promise<ClassSession[]> {
+    // Verificar que la semana existe
+    await this.weekService.findById(weekId);
+    
+    return await this.classSessionRepository.findByWeekId(weekId);
   }
 
   async findOne(id: string): Promise<ClassSession> {
@@ -33,9 +54,15 @@ export class ClassSessionService {
 
   async update(id: string, updateClassSessionDto: UpdateClassSessionDto): Promise<ClassSession | null> {
     await this.findOne(id);
-    if (updateClassSessionDto.programCourseId) {
-      await this.courseOfferingService.findOne(updateClassSessionDto.programCourseId);
+    
+    if (updateClassSessionDto.blockId) {
+      await this.blockService.findById(updateClassSessionDto.blockId);
     }
+    
+    if (updateClassSessionDto.weekId) {
+      await this.weekService.findById(updateClassSessionDto.weekId);
+    }
+    
     return await this.classSessionRepository.update(id, updateClassSessionDto);
   }
 

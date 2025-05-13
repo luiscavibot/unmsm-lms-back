@@ -5,12 +5,14 @@ import { ClassSessionController } from './controllers/class-session.controller';
 import { ClassSessionService } from './services/class-session.service';
 import { TypeormClassSessionsRepository } from './repositories/typeorm-class-sessions.repository';
 import { CLASS_SESSION_REPOSITORY } from './tokens';
-import { CourseOfferingModule } from '../course-offerings/course-offering.module';
+import { BlocksModule } from '../blocks/blocks.module';
+import { WeeksModule } from '../weeks/weeks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([ClassSession]),
-    CourseOfferingModule,
+    BlocksModule,
+    WeeksModule,
   ],
   controllers: [ClassSessionController],
   providers: [

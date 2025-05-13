@@ -1,18 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDate, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsDate, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class CreateClassSessionDto {
   @ApiProperty({
-    description: 'ID of the course offering',
+    description: 'ID del bloque al que pertenece la sesión de clase',
     example: '123e4567-e89b-12d3-a456-426614174000'
   })
   @IsUUID()
   @IsNotEmpty()
-  programCourseId: string;
+  blockId: string;
 
   @ApiProperty({
-    description: 'Date of the class session',
+    description: 'ID de la semana a la que pertenece la sesión de clase',
+    example: '123e4567-e89b-12d3-a456-426614174000'
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  weekId: string;
+
+  @ApiProperty({
+    description: 'Fecha de la sesión de clase',
     example: '2024-01-20'
   })
   @Transform(({ value }) => new Date(value))
@@ -21,7 +29,7 @@ export class CreateClassSessionDto {
   sessionDate: Date;
 
   @ApiProperty({
-    description: 'Start time of the class session',
+    description: 'Hora de inicio de la sesión de clase',
     example: '09:00'
   })
   @IsString()
@@ -29,7 +37,7 @@ export class CreateClassSessionDto {
   startTime: string;
 
   @ApiProperty({
-    description: 'End time of the class session',
+    description: 'Hora de finalización de la sesión de clase',
     example: '11:00'
   })
   @IsString()
@@ -37,10 +45,11 @@ export class CreateClassSessionDto {
   endTime: string;
 
   @ApiProperty({
-    description: 'Virtual room URL for the class session',
-    example: 'https://meet.google.com/abc-defg-hij'
+    description: 'URL de la sala virtual para la sesión de clase',
+    example: 'https://meet.google.com/abc-defg-hij',
+    required: false
   })
   @IsString()
-  @IsNotEmpty()
-  virtualRoomUrl: string;
+  @IsOptional()
+  virtualRoomUrl?: string;
 }

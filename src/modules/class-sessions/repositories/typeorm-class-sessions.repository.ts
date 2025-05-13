@@ -1,8 +1,10 @@
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClassSession } from '../entities/class-session.entity';
 import { IClassSessionRepository } from '../interfaces/class-session.repository.interface';
 
+@Injectable()
 export class TypeormClassSessionsRepository implements IClassSessionRepository {
   constructor(
     @InjectRepository(ClassSession)
@@ -15,14 +17,28 @@ export class TypeormClassSessionsRepository implements IClassSessionRepository {
 
   async findAll(): Promise<ClassSession[]> {
     return await this.classSessionRepository.find({
-      relations: ['programCourse'],
+      relations: ['block', 'week'],
     });
   }
 
   async findOne(id: string): Promise<ClassSession | null> {
     return await this.classSessionRepository.findOne({
       where: { id },
-      relations: ['programCourse'],
+      relations: ['block', 'week'],
+    });
+  }
+
+  async findByBlockId(blockId: string): Promise<ClassSession[]> {
+    return await this.classSessionRepository.find({
+      where: { blockId },
+      relations: ['block', 'week'],
+    });
+  }
+
+  async findByWeekId(weekId: string): Promise<ClassSession[]> {
+    return await this.classSessionRepository.find({
+      where: { weekId },
+      relations: ['block', 'week'],
     });
   }
 

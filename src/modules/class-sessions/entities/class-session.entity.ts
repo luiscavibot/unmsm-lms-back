@@ -1,13 +1,23 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
+import { Block } from '../../blocks/entities/block.entity';
+import { Week } from '../../weeks/entities/week.entity';
 
 @Entity({ name: 'class_sessions' })
 export class ClassSession {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  @ManyToOne(() => Block, { onDelete: 'SET NULL' })
+  block: Block;
+
   @Column({ nullable: true })
-  programCourseId: string;
+  blockId: string;
+
+  @ManyToOne(() => Week, { onDelete: 'SET NULL' })
+  week: Week;
+
+  @Column({ nullable: true })
+  weekId: string;
 
   @Column({ type: 'date' })
   sessionDate: Date;
@@ -20,7 +30,4 @@ export class ClassSession {
 
   @Column({ nullable: true })
   virtualRoomUrl: string;
-
-  @ManyToOne(() => CourseOffering, { onDelete: 'SET NULL' })
-  programCourse: CourseOffering;
 }
