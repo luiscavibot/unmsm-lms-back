@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course } from '../entities/course.entity';
@@ -8,6 +8,7 @@ import { CoursesByProgramTypeResponseDto, CourseDataDto, MetaDto, ProgramWithCou
 import { Enrollment } from '../../enrollments/entities/enrollment.entity';
 import { BlockAssignment } from '../../block-assignments/entities/block-assignment.entity';
 import { BlockRolType } from '../../block-assignments/enums/block-rol-type.enum';
+import { CourseDetailResponseDto } from '../dtos/course-detail-response.dto';
 
 @Injectable()
 export class TypeormCoursesRepository implements ICourseRepository {
@@ -169,6 +170,163 @@ export class TypeormCoursesRepository implements ICourseRepository {
     return {
       meta,
       programs: Array.from(programs.values())
+    };
+  }
+
+  async getCourseDetail(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto> {
+    // 1. Obtener información básica del curso y la oferta
+    const courseOfferingQuery = this.enrollmentRepository
+      .createQueryBuilder('enrollment')
+      .where('enrollment.userId = :userId', { userId })
+      .andWhere('enrollment.courseOfferingId = :courseOfferingId', { courseOfferingId })
+      .leftJoinAndSelect('enrollment.courseOffering', 'courseOffering')
+      .leftJoinAndSelect('courseOffering.program', 'program')
+      .leftJoinAndSelect('courseOffering.course', 'course')
+      .leftJoinAndSelect('courseOffering.semester', 'semester');
+
+    const enrollmentData = await courseOfferingQuery.getOne();
+    
+    if (!enrollmentData) {
+      throw new NotFoundException(`No se encontró matrícula para el usuario`);
+    }
+
+    // 2. Obtener el profesor responsable del curso
+    const teacherAssignment = await this.blockAssignmentRepository
+      .createQueryBuilder('blockAssignment')
+      .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId })
+      .andWhere('blockAssignment.blockRol = :blockRol', { blockRol: BlockRolType.RESPONSIBLE })
+      .leftJoinAndSelect('blockAssignment.user', 'user')
+      .getOne();
+
+    const teacherName = teacherAssignment 
+      ? `${teacherAssignment.user.firstName} ${teacherAssignment.user.lastName}`
+      : 'Sin profesor asignado';
+
+    // 3. Obtener los bloques del curso
+    const blocksQuery = await this.blockAssignmentRepository
+      .createQueryBuilder('blockAssignment')
+      .distinctOn(['block.id'])
+      .select('block.id', 'blockId')
+      .addSelect('block.type', 'type')
+      .addSelect('block.group', 'group')
+      .addSelect('block.classroomNumber', 'aula')
+      .addSelect('block.syllabusUrl', 'syllabusUrl')
+      .innerJoin('blockAssignment.block', 'block')
+      .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId })
+      .getRawMany();
+
+    // 4. Para cada bloque, obtener información detallada, incluyendo horarios y profesores
+    const now = new Date();
+    const blocksDetails = await Promise.all(
+      blocksQuery.map(async (block) => {
+        // Obtener información del profesor del bloque (si es collaborator)
+        const blockTeacherAssignment = await this.blockAssignmentRepository
+          .createQueryBuilder('blockAssignment')
+          .where('blockAssignment.blockId = :blockId', { blockId: block.blockId })
+          .andWhere('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId })
+          .andWhere('blockAssignment.blockRol = :blockRol', { blockRol: BlockRolType.COLLABORATOR })
+          .leftJoinAndSelect('blockAssignment.user', 'user')
+          .getOne();
+
+        let blockTeacherName: string | null = null;
+        let teacherCvUrl: string = '';
+        
+        // Si hay un profesor colaborador para este bloque, usar su información
+        if (blockTeacherAssignment) {
+          blockTeacherName = `${blockTeacherAssignment.user.firstName} ${blockTeacherAssignment.user.lastName}`;
+          teacherCvUrl = blockTeacherAssignment.user.resumeUrl || '';
+        } else if (teacherAssignment) {
+          // Si no hay colaborador, usar la información del responsable para el CV
+          teacherCvUrl = teacherAssignment.user.resumeUrl || '';
+        }
+
+        // Determinar la semana actual
+        // Obtener el primer día de la semana (lunes)
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        // Obtener el último día de la semana (domingo)
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        // Obtener las sesiones de clase para este bloque en la semana actual
+        const classSessions = await this.blockAssignmentRepository
+          .createQueryBuilder('blockAssignment')
+          .select('classSession.id', 'id')
+          .addSelect('classSession.sessionDate', 'sessionDate')
+          .addSelect('classSession.startTime', 'startTime')
+          .addSelect('classSession.endTime', 'endTime')
+          .addSelect('classSession.virtualRoomUrl', 'virtualRoomUrl')
+          .innerJoin('blockAssignment.block', 'block')
+          .innerJoin('class_sessions', 'classSession', 'classSession.blockId = block.id')
+          .where('blockAssignment.blockId = :blockId', { blockId: block.blockId })
+          .andWhere('classSession.sessionDate BETWEEN :startDate AND :endDate', { 
+            startDate: startOfWeek.toISOString().split('T')[0], 
+            endDate: endOfWeek.toISOString().split('T')[0]
+          })
+          .orderBy('classSession.sessionDate', 'ASC')
+          .addOrderBy('classSession.startTime', 'ASC')
+          .getRawMany();
+
+        // Formatear los horarios
+        const schedules = classSessions.map(session => {
+          const sessionDate = new Date(session.sessionDate);
+          const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+          const dayName = dayNames[sessionDate.getDay()];
+          return `${dayName}: ${session.startTime.substring(0, 5)} - ${session.endTime.substring(0, 5)}`;
+        });
+
+        // Encontrar la próxima sesión para obtener la URL de la sala virtual
+        let meetUrl = '';
+        const nextSession = classSessions.find(session => {
+          const sessionDate = new Date(session.sessionDate + 'T' + session.startTime);
+          return sessionDate >= now;
+        });
+
+        if (nextSession) {
+          meetUrl = nextSession.virtualRoomUrl || '';
+        } else if (classSessions.length > 0) {
+          // Si no hay próximas sesiones, usar la URL de la última sesión
+          meetUrl = classSessions[classSessions.length - 1].virtualRoomUrl || '';
+        }
+
+        // Formatear nombre del bloque
+        const blockName = block.type.charAt(0).toUpperCase() + block.type.slice(1) + 
+          (block.group ? ` - Grupo ${block.group}` : '');
+
+        // Crear el objeto de detalle del bloque
+        return {
+          blockId: block.blockId,
+          name: blockName,
+          schedule: schedules,
+          aula: block.aula || '',
+          teacher: blockTeacherName,
+          syllabus: {
+            fileName: `syllabus-${block.type}${block.group ? `-grupo-${block.group}` : ''}.pdf`,
+            downloadUrl: block.syllabusUrl || ''
+          },
+          cv: {
+            fileName: `cv-profesor.pdf`,
+            downloadUrl: teacherCvUrl
+          },
+          meetUrl: meetUrl
+        };
+      })
+    );
+
+    // 5. Armar la respuesta completa
+    return {
+      courseId: courseOfferingId,
+      name: enrollmentData.courseOffering.course.name,
+      programName: enrollmentData.courseOffering.program.name,
+      startDate: enrollmentData.courseOffering.startDate.toISOString().split('T')[0],
+      endDate: enrollmentData.courseOffering.endDate.toISOString().split('T')[0],
+      semester: `${enrollmentData.courseOffering.semester.year}-${enrollmentData.courseOffering.semester.name}`,
+      teacher: teacherName,
+      endNote: enrollmentData.finalAverage,
+      blocks: blocksDetails
     };
   }
 }

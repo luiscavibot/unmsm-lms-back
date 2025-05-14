@@ -9,6 +9,7 @@ import { CoursesByProgramTypeResponseDto } from '../dtos/courses-by-program-type
 import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
+import { CourseDetailResponseDto } from '../dtos/course-detail-response.dto';
 
 @Controller('courses')
 export class CourseController {
@@ -42,6 +43,24 @@ export class CourseController {
     @Query() filters: CoursesByProgramTypeDto
   ): Promise<CoursesByProgramTypeResponseDto> {
     return await this.courseService.findCoursesByProgramType(user.userId, filters);
+  }
+
+  @Get('detail/:courseOfferingId')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ 
+    summary: 'Obtener detalle completo de un curso',
+    description: 'Devuelve información detallada de un curso, incluyendo datos del profesor, bloques, horarios, y recursos asociados.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Detalle completo del curso',
+    type: CourseDetailResponseDto
+  })
+  async getCourseDetail(
+    @Param('courseOfferingId') courseOfferingId: string,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<CourseDetailResponseDto> {
+    return await this.courseService.getCourseDetail(courseOfferingId, user.userId);
   }
 
   @Get(':id')
