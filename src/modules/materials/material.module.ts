@@ -6,13 +6,13 @@ import { MaterialService } from './services/material.service';
 import { TypeormMaterialsRepository } from './repositories/typeorm-materials.repository';
 import { MATERIAL_REPOSITORY } from './tokens';
 import { EnrollmentModule } from '../enrollments/enrollment.module';
-import { ClassSessionModule } from '../class-sessions/class-session.module';
+import { WeeksModule } from '../weeks/weeks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Material]),
     EnrollmentModule,
-    ClassSessionModule,
+    WeeksModule,
   ],
   controllers: [MaterialController],
   providers: [

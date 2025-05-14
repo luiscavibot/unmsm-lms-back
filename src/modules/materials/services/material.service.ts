@@ -5,7 +5,7 @@ import { CreateMaterialDto } from '../dtos/create-material.dto';
 import { UpdateMaterialDto } from '../dtos/update-material.dto';
 import { MATERIAL_REPOSITORY } from '../tokens';
 import { EnrollmentService } from '../../enrollments/services/enrollment.service';
-import { ClassSessionService } from '../../class-sessions/services/class-session.service';
+import { WeekService } from '../../weeks/services/week.service';
 
 @Injectable()
 export class MaterialService {
@@ -13,17 +13,22 @@ export class MaterialService {
     @Inject(MATERIAL_REPOSITORY)
     private readonly materialRepository: IMaterialRepository,
     private readonly enrollmentService: EnrollmentService,
-    private readonly classSessionService: ClassSessionService,
+    private readonly weekService: WeekService,
   ) {}
 
   async create(createMaterialDto: CreateMaterialDto): Promise<Material> {
       await this.enrollmentService.findOne(createMaterialDto.enrollmentId);
-      await this.classSessionService.findOne(createMaterialDto.classSessionId);
+      await this.weekService.findById(createMaterialDto.weekId);
     return await this.materialRepository.create(createMaterialDto as Material);
   }
 
   async findAll(): Promise<Material[]> {
     return await this.materialRepository.findAll();
+  }
+
+  async findByWeekId(weekId: string): Promise<Material[]> {
+    await this.weekService.findById(weekId);
+    return await this.materialRepository.findByWeekId(weekId);
   }
 
   async findOne(id: string): Promise<Material> {
@@ -39,8 +44,8 @@ export class MaterialService {
     if (updateMaterialDto.enrollmentId) {
       await this.enrollmentService.findOne(updateMaterialDto.enrollmentId);
     }
-    if (updateMaterialDto.classSessionId) {
-      await this.classSessionService.findOne(updateMaterialDto.classSessionId);
+    if (updateMaterialDto.weekId) {
+      await this.weekService.findById(updateMaterialDto.weekId);
     }
     return await this.materialRepository.update(id, updateMaterialDto);
   }

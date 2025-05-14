@@ -1,8 +1,10 @@
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Material } from '../entities/material.entity';
 import { IMaterialRepository } from '../interfaces/material.repository.interface';
 
+@Injectable()
 export class TypeormMaterialsRepository implements IMaterialRepository {
   constructor(
     @InjectRepository(Material)
@@ -15,14 +17,21 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
 
   async findAll(): Promise<Material[]> {
     return await this.materialRepository.find({
-      relations: ['enrollment', 'classSession'],
+      relations: ['enrollment', 'week'],
     });
   }
 
   async findOne(id: string): Promise<Material | null> {
     return await this.materialRepository.findOne({
       where: { id },
-      relations: ['enrollment', 'classSession'],
+      relations: ['enrollment', 'week'],
+    });
+  }
+
+  async findByWeekId(weekId: string): Promise<Material[]> {
+    return await this.materialRepository.find({
+      where: { weekId },
+      relations: ['enrollment', 'week'],
     });
   }
 
