@@ -26,6 +26,9 @@ export class User {
   @Column({ nullable: true })
   imgUrl?: string;
 
+  @Column({ nullable: true, type: 'text' })
+  resumeUrl?: string;
+
   @ManyToOne(() => Role, { onDelete: 'SET NULL' })
   role: Role;
 }

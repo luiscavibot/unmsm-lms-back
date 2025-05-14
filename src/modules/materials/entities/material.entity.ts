@@ -1,6 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Enrollment } from '../../enrollments/entities/enrollment.entity';
-import { ClassSession } from '../../class-sessions/entities/class-session.entity';
+import { Week } from '../../weeks/entities/week.entity';
 
 @Entity({ name: 'materials' })
 export class Material {
@@ -11,7 +11,7 @@ export class Material {
   enrollmentId: string;
 
   @Column({ nullable: true })
-  classSessionId: string;
+  weekId: string;
 
   @Column({ length: 255 })
   title: string;
@@ -28,6 +28,6 @@ export class Material {
   @ManyToOne(() => Enrollment, { onDelete: 'SET NULL' })
   enrollment: Enrollment;
 
-  @ManyToOne(() => ClassSession, { onDelete: 'SET NULL' })
-  classSession: ClassSession;
+  @ManyToOne(() => Week, { onDelete: 'SET NULL' })
+  week: Week;
 }

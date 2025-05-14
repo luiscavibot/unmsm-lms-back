@@ -28,4 +28,22 @@ export class CreateBlockDto {
     required: false,
   })
   group?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description: 'Número de aula donde se dicta el bloque',
+    example: '301',
+    required: false,
+  })
+  classroomNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiProperty({
+    description: 'URL del sílabo del curso',
+    example: 'https://ejemplo.com/silabo.pdf',
+    required: false,
+  })
+  syllabusUrl?: string;
 }

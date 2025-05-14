@@ -47,4 +47,13 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   imgUrl?: string;
+
+  @ApiProperty({
+    description: 'URL del curriculum vitae del usuario',
+    example: 'https://example.com/resume.pdf',
+    required: false
+  })
+  @IsString()
+  @IsOptional()
+  resumeUrl?: string;
 }

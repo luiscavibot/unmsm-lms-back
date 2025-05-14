@@ -1,0 +1,1 @@
+export const WEEK_REPOSITORY = Symbol('WEEK_REPOSITORY');

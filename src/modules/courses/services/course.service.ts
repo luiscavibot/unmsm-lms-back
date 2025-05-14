@@ -6,6 +6,7 @@ import { UpdateCourseDto } from '../dtos/update-course.dto';
 import { COURSE_REPOSITORY } from '../tokens';
 import { CoursesByProgramTypeDto } from '../dtos/courses-by-program-type.dto';
 import { CoursesByProgramTypeResponseDto } from '../dtos/courses-by-program-type-response.dto';
+import { CourseDetailResponseDto } from '../dtos/course-detail-response.dto';
 
 @Injectable()
 export class CourseService {
@@ -42,5 +43,9 @@ export class CourseService {
   
   async findCoursesByProgramType(userId: string, filters: CoursesByProgramTypeDto): Promise<CoursesByProgramTypeResponseDto> {
     return await this.courseRepository.findCoursesByProgramType(userId, filters);
+  }
+
+  async getCourseDetail(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto> {
+    return await this.courseRepository.getCourseDetail(courseOfferingId, userId);
   }
 }
