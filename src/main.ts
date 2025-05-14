@@ -22,6 +22,16 @@ async function bootstrap() {
     .setTitle('UNMSM LMS API')
     .setDescription('API for UNMSM LMS')
     .setVersion('1.0.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Inserta tu JWT aquí (sin el prefijo “Bearer ”).',
+      },
+      'bearer',
+    )
+    .addSecurityRequirements('bearer')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
