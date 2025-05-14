@@ -20,8 +20,6 @@ export class FacultyController {
   @Get()
   @ApiOperation({ summary: 'Get all faculties' })
   async findAll(@CurrentUserToken() token: UserPayload): Promise<Faculty[]> {
-    console.log('Current User ID:', token.userId);
-    console.log('Current User Role Name:', token.rolName);
     return await this.facultyService.findAll();
   }
 
