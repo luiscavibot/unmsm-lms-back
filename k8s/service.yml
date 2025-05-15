@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: biologia-lms-apirest-service
+  namespace: default
+spec:
+  selector:
+    app: biologia-lms-apirest-app
+  ports:
+    - protocol: TCP
+      port: 80
+      name: http
+      targetPort: 4000
+  type: ClusterIP

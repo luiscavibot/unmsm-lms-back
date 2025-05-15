@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: biologia-lms-apirest-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: biologia-lms-apirest-app
+  template:
+    metadata:
+      labels:
+        app: biologia-lms-apirest-app
+    spec:
+      containers:
+        - name: biologia-lms-apirest-container
+          image: 365227208102.dkr.ecr.us-east-2.amazonaws.com/biologia-lms-apirest:latest
+          ports:
+            - containerPort: 4000
+          env:
+            - name: NODE_ENV
+              value: 'production'
+          resources:
+            requests:
+              memory: '256Mi'
+              cpu: '100m'
+            limits:
+              memory: '512Mi'
+              cpu: '200m'

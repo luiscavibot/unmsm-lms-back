@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: biologia-lms-apirest
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/group.name: unmsm-alb-ingress
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-2:365227208102:certificate/e1773fa5-8732-47fc-9359-ede06418eb79
+
+spec:
+  rules:
+    - host: biologia-lms-api.unmsm.link
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: biologia-lms-apirest-service
+                port:
+                  name: http
