@@ -81,7 +81,16 @@ export class TypeormCoursesRepository implements ICourseRepository {
     }
     
     if (semester) {
+      // Si se proporciona un semestre específico, filtrar por ese semestre
       query.andWhere('courseOffering.semesterId = :semester', { semester });
+    } else {
+      // Si no se proporciona un semestre, filtrar por los últimos 2 años (similar a by-user/enrolled)
+      const actualYear = new Date().getFullYear();
+      const lastYear = actualYear - 1;
+      query.andWhere('semester.year >= :lastYear AND semester.year <= :actualYear', { 
+        lastYear,
+        actualYear 
+      });
     }
     
     if (keyword) {
