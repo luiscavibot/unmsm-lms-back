@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { MaterialService } from '../services/material.service';
 import { CreateMaterialDto } from '../dtos/create-material.dto';
 import { UpdateMaterialDto } from '../dtos/update-material.dto';
 import { Material } from '../entities/material.entity';
+import { WeekWithMaterialsDto } from '../dtos/response-material.dto';
 
 @Controller('materials')
 export class MaterialController {
@@ -43,5 +44,17 @@ export class MaterialController {
   @ApiOperation({ summary: 'Eliminar un material' })
   async remove(@Param('id') id: string): Promise<void> {
     return await this.materialService.remove(id);
+  }
+
+  @Get('block/:blockId')
+  @ApiOperation({ summary: 'Obtener todos los materiales agrupados por semana para un bloque específico' })
+  @ApiParam({ name: 'blockId', description: 'ID del bloque' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de materiales agrupados por semana para el bloque',
+    type: [WeekWithMaterialsDto]
+  })
+  async findByBlockId(@Param('blockId') blockId: string): Promise<WeekWithMaterialsDto[]> {
+    return await this.materialService.findMaterialsByBlockId(blockId);
   }
 }

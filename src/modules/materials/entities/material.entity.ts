@@ -1,6 +1,7 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Enrollment } from '../../enrollments/entities/enrollment.entity';
 import { Week } from '../../weeks/entities/week.entity';
+import { MaterialType } from '../enums/material-type.enum';
+import { User } from '../../users/entities/user.entity';
 
 @Entity({ name: 'materials' })
 export class Material {
@@ -8,16 +9,17 @@ export class Material {
   id: string;
 
   @Column({ nullable: true })
-  enrollmentId: string;
-
-  @Column({ nullable: true })
   weekId: string;
 
   @Column({ length: 255 })
   title: string;
 
-  @Column({ length: 50 })
-  type: string;
+  @Column({
+    type: 'enum',
+    enum: MaterialType,
+    default: MaterialType.CLASS_SLIDES
+  })
+  type: MaterialType;
 
   @Column({ type: 'text' })
   fileUrl: string;
@@ -25,8 +27,11 @@ export class Material {
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   date: Date;
 
-  @ManyToOne(() => Enrollment, { onDelete: 'SET NULL' })
-  enrollment: Enrollment;
+  @Column({ nullable: true })
+  uploadedById: string;
+
+  @ManyToOne(() => User, { onDelete: 'SET NULL' })
+  uploadedBy: User;
 
   @ManyToOne(() => Week, { onDelete: 'SET NULL' })
   week: Week;
