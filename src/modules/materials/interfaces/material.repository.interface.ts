@@ -5,6 +5,7 @@ export interface IMaterialRepository {
   findAll(): Promise<Material[]>;
   findOne(id: string): Promise<Material | null>;
   findByWeekId(weekId: string): Promise<Material[]>;
+  findByBlockId(blockId: string): Promise<any[]>;
   update(id: string, material: Partial<Material>): Promise<Material | null>;
   delete(id: string): Promise<void>;
 }

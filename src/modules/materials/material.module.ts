@@ -5,14 +5,16 @@ import { MaterialController } from './controllers/material.controller';
 import { MaterialService } from './services/material.service';
 import { TypeormMaterialsRepository } from './repositories/typeorm-materials.repository';
 import { MATERIAL_REPOSITORY } from './tokens';
-import { EnrollmentModule } from '../enrollments/enrollment.module';
 import { WeeksModule } from '../weeks/weeks.module';
+import { BlocksModule } from '../blocks/blocks.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Material]),
-    EnrollmentModule,
     WeeksModule,
+    BlocksModule,
+    UsersModule,
   ],
   controllers: [MaterialController],
   providers: [
