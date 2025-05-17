@@ -7,12 +7,14 @@ import { TypeormAttendanceRepository } from './repositories/typeorm-attendance.r
 import { ATTENDANCE_REPOSITORY } from './tokens';
 import { EnrollmentModule } from '../enrollments/enrollment.module';
 import { ClassSessionModule } from '../class-sessions/class-session.module';
+import { BlocksModule } from '../blocks/blocks.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Attendance]),
     EnrollmentModule,
     ClassSessionModule,
+    BlocksModule,
   ],
   controllers: [AttendanceController],
   providers: [
