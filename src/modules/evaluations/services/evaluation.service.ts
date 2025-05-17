@@ -4,6 +4,7 @@ import { EVALUATION_REPOSITORY } from '../tokens/index';
 import { Evaluation } from '../entities/evaluation.entity';
 import { CreateEvaluationDto } from '../dtos/create-evaluation.dto';
 import { UpdateEvaluationDto } from '../dtos/update-evaluation.dto';
+import { StudentGradesResponseDto } from '../dtos/student-grades-response.dto';
 
 @Injectable()
 export class EvaluationService {
@@ -70,5 +71,13 @@ export class EvaluationService {
       throw new NotFoundException(`Evaluation with ID ${id} not found`);
     }
     await this.evaluationRepository.delete(id);
+  }
+
+  async findStudentGradesByBlockId(blockId: string, userId: string): Promise<StudentGradesResponseDto> {
+    try {
+      return await this.evaluationRepository.findStudentGradesByBlockId(blockId, userId);
+    } catch (error) {
+      throw new NotFoundException(`No se pudieron encontrar las notas para el bloque ${blockId} y el usuario ${userId}: ${error.message}`);
+    }
   }
 }
