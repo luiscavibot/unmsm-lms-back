@@ -1,4 +1,4 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 import { BlockType } from '../enums/block-type.enum';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -24,7 +24,7 @@ export class CreateBlockDto {
   @IsString()
   @ApiProperty({
     description: 'Grupo al que pertenece el bloque',
-    example: 'Grupo 1',
+    example: 'I',
     required: false,
   })
   group?: string;

@@ -29,36 +29,38 @@ export class CourseController {
 
   @Get('by-program-type')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Obtener cursos agrupados por programa',
-    description: 'Devuelve los cursos en los que el usuario está matriculado, agrupados por programa académico. Permite filtrado por tipo de programa, estado, semestre y búsqueda por texto.'
+    description:
+      'Devuelve los cursos en los que el usuario está matriculado, agrupados por programa académico. Permite filtrado por tipo de programa, estado, semestre y búsqueda por texto.',
   })
   @ApiResponse({
     status: 200,
     description: 'Lista de cursos agrupados por programa académico',
-    type: CoursesByProgramTypeResponseDto
+    type: CoursesByProgramTypeResponseDto,
   })
   async findCoursesByProgramType(
     @CurrentUserToken() user: UserPayload,
-    @Query() filters: CoursesByProgramTypeDto
+    @Query() filters: CoursesByProgramTypeDto,
   ): Promise<CoursesByProgramTypeResponseDto> {
     return await this.courseService.findCoursesByProgramType(user.userId, filters);
   }
 
   @Get('detail/:courseOfferingId')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Obtener detalle completo de un curso',
-    description: 'Devuelve información detallada de un curso, incluyendo datos del profesor, bloques, horarios, y recursos asociados.'
+    description:
+      'Devuelve información detallada de un curso, incluyendo datos del profesor, bloques, horarios, y recursos asociados.',
   })
   @ApiResponse({
     status: 200,
     description: 'Detalle completo del curso',
-    type: CourseDetailResponseDto
+    type: CourseDetailResponseDto,
   })
   async getCourseDetail(
     @Param('courseOfferingId') courseOfferingId: string,
-    @CurrentUserToken() user: UserPayload
+    @CurrentUserToken() user: UserPayload,
   ): Promise<CourseDetailResponseDto> {
     return await this.courseService.getCourseDetail(courseOfferingId, user.userId);
   }

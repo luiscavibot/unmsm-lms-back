@@ -16,11 +16,11 @@ export class Block {
   @Column({
     type: 'enum',
     enum: BlockType,
-    default: BlockType.THEORY
+    default: BlockType.THEORY,
   })
   type: BlockType;
 
-  @Column({ length: 50, nullable: true })
+  @Column({ length: 10, nullable: true })
   group: string;
 
   @Column({ length: 50, nullable: true })

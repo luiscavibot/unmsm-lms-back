@@ -4,11 +4,17 @@ import { Repository } from 'typeorm';
 import { Course } from '../entities/course.entity';
 import { ICourseRepository } from '../interfaces/course.repository.interface';
 import { CoursesByProgramTypeDto } from '../dtos/courses-by-program-type.dto';
-import { CoursesByProgramTypeResponseDto, CourseDataDto, MetaDto, ProgramWithCoursesDto } from '../dtos/courses-by-program-type-response.dto';
+import {
+  CoursesByProgramTypeResponseDto,
+  CourseDataDto,
+  MetaDto,
+  ProgramWithCoursesDto,
+} from '../dtos/courses-by-program-type-response.dto';
 import { Enrollment } from '../../enrollments/entities/enrollment.entity';
 import { BlockAssignment } from '../../block-assignments/entities/block-assignment.entity';
 import { BlockRolType } from '../../block-assignments/enums/block-rol-type.enum';
 import { CourseDetailResponseDto } from '../dtos/course-detail-response.dto';
+import { BlockType, BlockTypeInSpanish } from 'src/modules/blocks/enums/block-type.enum';
 
 @Injectable()
 export class TypeormCoursesRepository implements ICourseRepository {
@@ -45,41 +51,38 @@ export class TypeormCoursesRepository implements ICourseRepository {
   async delete(id: string): Promise<void> {
     await this.courseRepository.delete(id);
   }
-  
-  async findCoursesByProgramType(userId: string, filters: CoursesByProgramTypeDto): Promise<CoursesByProgramTypeResponseDto> {
-    const { 
-      status, 
-      programType, 
-      semester, 
-      page = 1, 
-      limit = 20, 
-      keyword 
-    } = filters;
-    
+
+  async findCoursesByProgramType(
+    userId: string,
+    filters: CoursesByProgramTypeDto,
+  ): Promise<CoursesByProgramTypeResponseDto> {
+    const { status, programType, semester, page = 1, limit = 20, keyword } = filters;
+
     // Calcular el offset para la paginación
     const skip = (page - 1) * limit;
-    
+
     // Crear la consulta base para obtener todos los course offerings en los que está matriculado el usuario
-    const query = this.enrollmentRepository.createQueryBuilder('enrollment')
+    const query = this.enrollmentRepository
+      .createQueryBuilder('enrollment')
       .where('enrollment.userId = :userId', { userId })
       .leftJoinAndSelect('enrollment.courseOffering', 'courseOffering')
       .leftJoinAndSelect('courseOffering.program', 'program')
       .leftJoinAndSelect('courseOffering.course', 'course')
       .leftJoinAndSelect('courseOffering.semester', 'semester');
-    
+
     // Aplicar filtros según los parámetros recibidos
     if (status) {
       if (status === 'current') {
-      query.andWhere('courseOffering.status IN (:...statuses)', { statuses: ['current', 'unstarted'] });
+        query.andWhere('courseOffering.status IN (:...statuses)', { statuses: ['current', 'unstarted'] });
       } else {
-      query.andWhere('courseOffering.status = :status', { status });
+        query.andWhere('courseOffering.status = :status', { status });
       }
     }
-    
+
     if (programType) {
       query.andWhere('program.type = :programType', { programType });
     }
-    
+
     if (semester) {
       // Si se proporciona un semestre específico, filtrar por ese semestre
       query.andWhere('courseOffering.semesterId = :semester', { semester });
@@ -87,46 +90,43 @@ export class TypeormCoursesRepository implements ICourseRepository {
       // Si no se proporciona un semestre, filtrar por los últimos 2 años (similar a by-user/enrolled)
       const actualYear = new Date().getFullYear();
       const lastYear = actualYear - 1;
-      query.andWhere('semester.year >= :lastYear AND semester.year <= :actualYear', { 
+      query.andWhere('semester.year >= :lastYear AND semester.year <= :actualYear', {
         lastYear,
-        actualYear 
+        actualYear,
       });
     }
-    
+
     if (keyword) {
-      query.andWhere(
-        '(course.name LIKE :keyword OR program.name LIKE :keyword)',
-        { keyword: `%${keyword}%` }
-      );
+      query.andWhere('(course.name LIKE :keyword OR program.name LIKE :keyword)', { keyword: `%${keyword}%` });
     }
-    
+
     // Obtener el total de registros para la paginación
     const totalCount = await query.getCount();
     const totalPages = Math.ceil(totalCount / limit);
-    
+
     // Aplicar paginación
     query.skip(skip).take(limit);
-    
+
     // Ejecutar la consulta
     const enrollments = await query.getMany();
-    
+
     // Obtener los programas únicos de los course offerings
     const programs: Map<string, ProgramWithCoursesDto> = new Map();
-    
+
     // Procesar cada enrollment para construir la respuesta
     for (const enrollment of enrollments) {
       const { courseOffering } = enrollment;
-      
+
       // Verificar si ya tenemos el programa en el mapa
       if (!programs.has(courseOffering.programId)) {
         const program = courseOffering.program;
         programs.set(program.id, {
           programId: program.id,
           name: program.name,
-          courses: []
+          courses: [],
         });
       }
-      
+
       // Buscar el profesor responsable para este course offering
       const teacherAssignment = await this.blockAssignmentRepository
         .createQueryBuilder('blockAssignment')
@@ -134,20 +134,22 @@ export class TypeormCoursesRepository implements ICourseRepository {
         .andWhere('blockAssignment.blockRol = :blockRol', { blockRol: BlockRolType.RESPONSIBLE })
         .leftJoinAndSelect('blockAssignment.user', 'user')
         .getOne();
-      
+
       // Crear el objeto de profesor
-      const teacher = teacherAssignment ? {
-        name: `${teacherAssignment.user.firstName} ${teacherAssignment.user.lastName}`,
-        imgUrl: teacherAssignment.user.imgUrl || 'https://www.imagen.com'
-      } : {
-        name: 'Sin profesor asignado',
-        imgUrl: 'https://www.imagen.com'
-      };
-      
+      const teacher = teacherAssignment
+        ? {
+            name: `${teacherAssignment.user.firstName} ${teacherAssignment.user.lastName}`,
+            imgUrl: teacherAssignment.user.imgUrl || 'https://www.imagen.com',
+          }
+        : {
+            name: 'Sin profesor asignado',
+            imgUrl: 'https://www.imagen.com',
+          };
+
       // Formatear las fechas
       const startDate = new Date(courseOffering.startDate);
       const endDate = new Date(courseOffering.endDate);
-      
+
       // Construir el objeto de curso
       const courseData: CourseDataDto = {
         courseId: courseOffering.id,
@@ -157,29 +159,38 @@ export class TypeormCoursesRepository implements ICourseRepository {
         endDate: endDate.toISOString().split('T')[0],
         semester: courseOffering.semester.year + '-' + courseOffering.semester.name,
         module: courseOffering.module || '',
-        unstarted: courseOffering.status === 'unstarted'
+        unstarted: courseOffering.status === 'unstarted',
       };
-      
+
       // Agregar el curso al programa correspondiente
       const programWithCourses = programs.get(courseOffering.programId);
       if (programWithCourses) {
         programWithCourses.courses.push(courseData);
       }
     }
-    
+
     // Crear el objeto de metadatos para la paginación
     const meta: MetaDto = {
       totalCount,
       page,
       limit,
-      totalPages
+      totalPages,
     };
-    
+
     // Construir la respuesta final
     return {
       meta,
-      programs: Array.from(programs.values())
+      programs: Array.from(programs.values()),
     };
+  }
+
+  blockTypeName(blockType: BlockType): string {
+    switch (blockType) {
+      case BlockType.THEORY:
+        return BlockTypeInSpanish.THEORY;
+      default:
+        return BlockTypeInSpanish.PRACTICE;
+    }
   }
 
   async getCourseDetail(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto> {
@@ -194,7 +205,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
       .leftJoinAndSelect('courseOffering.semester', 'semester');
 
     const enrollmentData = await courseOfferingQuery.getOne();
-    
+
     if (!enrollmentData) {
       throw new NotFoundException(`No se encontró matrícula para el usuario`);
     }
@@ -207,7 +218,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
       .leftJoinAndSelect('blockAssignment.user', 'user')
       .getOne();
 
-    const teacherName = teacherAssignment 
+    const teacherName = teacherAssignment
       ? `${teacherAssignment.user.firstName} ${teacherAssignment.user.lastName}`
       : 'Sin profesor asignado';
 
@@ -239,7 +250,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
 
         let blockTeacherName: string | null = null;
         let teacherCvUrl: string = '';
-        
+
         // Si hay un profesor colaborador para este bloque, usar su información
         if (blockTeacherAssignment) {
           blockTeacherName = `${blockTeacherAssignment.user.firstName} ${blockTeacherAssignment.user.lastName}`;
@@ -254,7 +265,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
         startOfWeek.setHours(0, 0, 0, 0);
-        
+
         // Obtener el último día de la semana (domingo)
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
@@ -271,16 +282,16 @@ export class TypeormCoursesRepository implements ICourseRepository {
           .innerJoin('blockAssignment.block', 'block')
           .innerJoin('class_sessions', 'classSession', 'classSession.blockId = block.id')
           .where('blockAssignment.blockId = :blockId', { blockId: block.blockId })
-          .andWhere('classSession.sessionDate BETWEEN :startDate AND :endDate', { 
-            startDate: startOfWeek.toISOString().split('T')[0], 
-            endDate: endOfWeek.toISOString().split('T')[0]
+          .andWhere('classSession.sessionDate BETWEEN :startDate AND :endDate', {
+            startDate: startOfWeek.toISOString().split('T')[0],
+            endDate: endOfWeek.toISOString().split('T')[0],
           })
           .orderBy('classSession.sessionDate', 'ASC')
           .addOrderBy('classSession.startTime', 'ASC')
           .getRawMany();
 
         // Formatear los horarios
-        const schedules = classSessions.map(session => {
+        const schedules = classSessions.map((session) => {
           const sessionDate = new Date(session.sessionDate);
           const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
           const dayName = dayNames[sessionDate.getDay()];
@@ -289,7 +300,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
 
         // Encontrar la próxima sesión para obtener la URL de la sala virtual
         let meetUrl = '';
-        const nextSession = classSessions.find(session => {
+        const nextSession = classSessions.find((session) => {
           const sessionDate = new Date(session.sessionDate + 'T' + session.startTime);
           return sessionDate >= now;
         });
@@ -302,27 +313,29 @@ export class TypeormCoursesRepository implements ICourseRepository {
         }
 
         // Formatear nombre del bloque
-        const blockName = block.type.charAt(0).toUpperCase() + block.type.slice(1) + 
-          (block.group ? ` - Grupo ${block.group}` : '');
+        const blockTypeName = this.blockTypeName(block.type);
+        const blockGroupName = block?.group ? `Grupo ${block.group}` : '';
+        const blockName = `${blockTypeName} (${blockGroupName})`;
 
         // Crear el objeto de detalle del bloque
         return {
           blockId: block.blockId,
+          blockType: block.type,
           name: blockName,
           schedule: schedules,
           aula: block.aula || '',
           teacher: blockTeacherName,
           syllabus: {
             fileName: `syllabus-${block.type}${block.group ? `-grupo-${block.group}` : ''}.pdf`,
-            downloadUrl: block.syllabusUrl || ''
+            downloadUrl: block.syllabusUrl || '',
           },
           cv: {
             fileName: `cv-profesor.pdf`,
-            downloadUrl: teacherCvUrl
+            downloadUrl: teacherCvUrl,
           },
-          meetUrl: meetUrl
+          meetUrl: meetUrl,
         };
-      })
+      }),
     );
 
     // 5. Armar la respuesta completa
@@ -335,7 +348,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
       semester: `${enrollmentData.courseOffering.semester.year}-${enrollmentData.courseOffering.semester.name}`,
       teacher: teacherName,
       endNote: enrollmentData.finalAverage,
-      blocks: blocksDetails
+      blocks: blocksDetails,
     };
   }
 }
