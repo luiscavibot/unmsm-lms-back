@@ -10,6 +10,7 @@ import { CurrentUserToken } from '../../../common/auth/decorators/current-user.d
 import { UserPayload } from '../../../common/auth/interfaces';
 
 @ApiTags('Evaluaciones')
+@Controller('evaluations')
 export class EvaluationController {
   constructor(private readonly evaluationService: EvaluationService) {}
 
@@ -24,22 +25,23 @@ export class EvaluationController {
 
   @Get('student-grades/:blockId')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ 
-    summary: 'Obtener notas de un estudiante por bloque', 
-    description: 'Devuelve las notas de evaluaciones de un estudiante para un bloque específico usando el ID del usuario del token'
+  @ApiOperation({
+    summary: 'Obtener notas de un estudiante por bloque',
+    description:
+      'Devuelve las notas de evaluaciones de un estudiante para un bloque específico usando el ID del usuario del token',
   })
   @ApiResponse({
     status: 200,
     description: 'Notas del estudiante con promedio ponderado',
-    type: StudentGradesResponseDto
+    type: StudentGradesResponseDto,
   })
   @ApiResponse({
     status: 404,
-    description: 'No se encontraron notas o matrícula para el bloque y usuario especificados'
+    description: 'No se encontraron notas o matrícula para el bloque y usuario especificados',
   })
   async getStudentGradesByBlockId(
     @Param('blockId') blockId: string,
-    @CurrentUserToken() user: UserPayload
+    @CurrentUserToken() user: UserPayload,
   ): Promise<StudentGradesResponseDto> {
     return this.evaluationService.findStudentGradesByBlockId(blockId, user.userId);
   }
@@ -56,10 +58,7 @@ export class EvaluationController {
   }
 
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() updateEvaluationDto: UpdateEvaluationDto,
-  ): Promise<Evaluation> {
+  async update(@Param('id') id: string, @Body() updateEvaluationDto: UpdateEvaluationDto): Promise<Evaluation> {
     return this.evaluationService.update(id, updateEvaluationDto);
   }
 
