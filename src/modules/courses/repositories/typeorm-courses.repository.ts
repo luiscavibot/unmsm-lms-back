@@ -314,7 +314,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
 
         // Formatear nombre del bloque
         const blockTypeName = this.blockTypeName(block.type);
-        const blockGroupName = block?.type === BlockType.PRACTICE ? ` (Grupo ${block.group})` : '';
+        const blockGroupName = block?.type === BlockType.PRACTICE ? ` - Grupo ${block.group}` : '';
         const blockName = blockTypeName + blockGroupName;
 
         // Crear el objeto de detalle del bloque
