@@ -6,11 +6,16 @@ import { EvaluationService } from './services/evaluation.service';
 import { EVALUATION_REPOSITORY } from './tokens/index';
 import { TypeormEvaluationsRepository } from './repositories/typeorm-evaluations.repository';
 import { BlocksModule } from '../blocks/blocks.module';
+import { EnrollmentModule } from '../enrollments/enrollment.module';
+import { Grade } from '../grades/entities/grade.entity';
+import { Enrollment } from '../enrollments/entities/enrollment.entity';
+import { EnrollmentBlock } from '../enrollment-blocks/entities/enrollment-block.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Evaluation]),
-    BlocksModule
+    TypeOrmModule.forFeature([Evaluation, Grade, Enrollment, EnrollmentBlock]),
+    BlocksModule,
+    EnrollmentModule
   ],
   controllers: [EvaluationController],
   providers: [
