@@ -12,6 +12,6 @@ export class Week {
   @Column({ nullable: true })
   blockId: string;
 
-  @Column({ length: 100 })
-  name: string;
+  @Column({ type: 'int', unsigned: true })
+  number: number;
 }

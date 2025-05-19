@@ -36,6 +36,12 @@ export class WeekAttendanceDto {
   weekName: string;
 
   @ApiProperty({
+    description: 'Número de la semana',
+    example: 1
+  })
+  weekNumber: number;
+
+  @ApiProperty({
     description: 'Lista de asistencias para esta semana',
     type: [AttendanceDetailDto]
   })

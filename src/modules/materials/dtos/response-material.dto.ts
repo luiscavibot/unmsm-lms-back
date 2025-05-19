@@ -66,6 +66,12 @@ export class WeekWithMaterialsDto {
   week: string;
 
   @ApiProperty({
+    description: 'Número de la semana',
+    example: 2,
+  })
+  weekNumber: number;
+
+  @ApiProperty({
     description: 'Materiales de la semana',
     type: [MaterialResponseDto],
   })
