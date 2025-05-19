@@ -8,6 +8,7 @@ export interface AttendanceByWeekResponseDto {
 export interface WeekAttendanceDto {
   weekId: string;
   weekName: string;
+  weekNumber: number;
   attendances: AttendanceDetailDto[];
 }
 

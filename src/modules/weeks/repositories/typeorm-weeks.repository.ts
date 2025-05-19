@@ -28,6 +28,7 @@ export class TypeormWeeksRepository implements IWeekRepository {
     return this.weekRepository.find({
       where: { blockId },
       relations: ['block'],
+      order: { number: 'DESC' }
     });
   }
 

@@ -44,7 +44,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
       .where('block.id = :blockId', { blockId })
       .select([
         'week.id as weekId',
-        'week.name as weekName',
+        'week.number as weekNumber',
         'material.id as materialId',
         'material.title as name',
         'material.type as materialType',
@@ -54,7 +54,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
         'user.lastName as userLastName',
         'material.fileUrl as materialUrl'
       ])
-      .orderBy('week.name', 'ASC')
+      .orderBy('week.number', 'DESC')
       .addOrderBy('material.title', 'ASC');
 
     const materialsData = await query.getRawMany();
@@ -64,9 +64,11 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
     
     for (const item of materialsData) {
       if (!weekMap.has(item.weekId)) {
+        const weekName = `Semana ${item.weekNumber}`;
         weekMap.set(item.weekId, {
           id: item.weekId,
-          week: item.weekName,
+          week: weekName,
+          weekNumber: item.weekNumber,
           materials: []
         });
       }

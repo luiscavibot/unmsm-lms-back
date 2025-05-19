@@ -54,7 +54,7 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
           'classSession.sessionDate',
           'classSession.id',
           'week.id',
-          'week.name',
+          'week.number',
         ])
         .orderBy('classSession.sessionDate', 'ASC');
 
@@ -81,18 +81,20 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
       for (const attendance of attendances) {
         try {
           const weekId = attendance.classSession?.week?.id;
-          const weekName = attendance.classSession?.week?.name;
+          const weekNumber = attendance.classSession?.week?.number;
           
-          if (!weekId || !weekName || !attendance.classSession?.sessionDate) {
+          if (!weekId || weekNumber === undefined || !attendance.classSession?.sessionDate) {
             continue; // Saltar este registro si falta información crucial
           }
           
           const sessionDate = new Date(attendance.classSession.sessionDate);
+          const weekName = `Semana ${weekNumber}`;
           
           if (!weekAttendancesMap.has(weekId)) {
             weekAttendancesMap.set(weekId, {
               weekId,
               weekName,
+              weekNumber,
               attendances: []
             });
           }
@@ -132,8 +134,9 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
         }
       }
       
-      // Convertir el mapa a un array
-      const weeks: WeekAttendanceDto[] = Array.from(weekAttendancesMap.values());
+      // Convertir el mapa a un array y ordenar por número de semana descendentemente
+      const weeks: WeekAttendanceDto[] = Array.from(weekAttendancesMap.values())
+        .sort((a, b) => b.weekNumber - a.weekNumber);
       
       return {
         attendancePercentage,

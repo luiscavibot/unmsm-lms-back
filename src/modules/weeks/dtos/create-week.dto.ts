@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsInt, IsNotEmpty, IsUUID, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateWeekDto {
   @IsNotEmpty()
@@ -11,10 +12,14 @@ export class CreateWeekDto {
   blockId: string;
 
   @IsNotEmpty()
-  @IsString()
+  @IsInt()
+  @Min(1)
+  @Max(99)
+  @Type(() => Number)
   @ApiProperty({
-    description: 'Nombre de la semana',
-    example: 'Semana 1',
+    description: 'Número de la semana (1-99)',
+    example: 1,
+    type: Number,
   })
-  name: string;
+  number: number;
 }
