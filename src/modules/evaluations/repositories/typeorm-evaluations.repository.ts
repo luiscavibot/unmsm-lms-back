@@ -67,52 +67,53 @@ export class TypeormEvaluationsRepository implements EvaluationRepository {
         .getOne();
 
       if (!enrollmentBlock) {
-        throw new NotFoundException(`No se encontró matrícula para el usuario con ID ${userId} en el bloque ${blockId}`);
+        throw new NotFoundException(
+          `No se encontró matrícula para el usuario con ID ${userId} en el bloque ${blockId}`,
+        );
       }
 
       // Usar el enrollmentId obtenido directamente
       const enrollmentId = enrollmentBlock.enrollmentId;
 
-    // Obtener todas las evaluaciones del bloque junto con las notas del estudiante en una sola consulta
-    const evaluationsWithGrades = await this.evaluationRepository
-      .createQueryBuilder('evaluation')
-      .select('evaluation.id', 'evaluationId')
-      .addSelect('evaluation.title', 'title')
-      .addSelect('evaluation.weight', 'weight')
-      .addSelect('evaluation.evaluationDate', 'evaluationDate')
-      .addSelect('grade.score', 'score')
-      .leftJoin('grades', 'grade', 'grade.evaluationId = evaluation.id AND grade.enrollmentId = :enrollmentId', 
-        { enrollmentId: enrollmentId })
-      .where('evaluation.blockId = :blockId', { blockId })
-      .orderBy('evaluation.evaluationDate', 'ASC')
-      .getRawMany();
+      // Obtener todas las evaluaciones del bloque junto con las notas del estudiante en una sola consulta
+      const evaluationsWithGrades = await this.evaluationRepository
+        .createQueryBuilder('evaluation')
+        .select('evaluation.id', 'evaluationId')
+        .addSelect('evaluation.title', 'title')
+        .addSelect('evaluation.weight', 'weight')
+        .addSelect('evaluation.evaluationDate', 'evaluationDate')
+        .addSelect('grade.score', 'score')
+        .leftJoin('grades', 'grade', 'grade.evaluationId = evaluation.id AND grade.enrollmentId = :enrollmentId', {
+          enrollmentId: enrollmentId,
+        })
+        .where('evaluation.blockId = :blockId', { blockId })
+        .orderBy('evaluation.evaluationDate', 'ASC')
+        .getRawMany();
 
-    // Formatear los resultados
-    const evaluationGrades: EvaluationGradeDto[] = evaluationsWithGrades.map(item => {
+      // Formatear los resultados
+      const evaluationGrades: EvaluationGradeDto[] = evaluationsWithGrades.map((item) => {
+        return {
+          name: item.title,
+          weight: parseFloat(item.weight),
+          evaluationDate: format(new Date(item.evaluationDate), 'dd/MM/yyyy'),
+          grade: item.score ? parseFloat(item.score) : 0,
+        };
+      });
+
+      // Calcular el promedio ponderado
+      const totalWeight = evaluationGrades.reduce((acc, item) => acc + item.weight, 0);
+      let weightedScoreSum = 0;
+
+      evaluationGrades.forEach((item) => {
+        weightedScoreSum += item.grade * item.weight;
+      });
+
+      const averageGrade = totalWeight > 0 ? parseFloat((weightedScoreSum / totalWeight).toFixed(2)) : 0;
+
       return {
-        name: item.title,
-        weight: parseFloat(item.weight),
-        evaluationDate: format(new Date(item.evaluationDate), 'dd/MM/yyyy'),
-        grade: item.score ? parseFloat(item.score) : 0
+        averageGrade,
+        evaluations: evaluationGrades,
       };
-    });
-
-    // Calcular el promedio ponderado
-    const totalWeight = 100;
-    let weightedScoreSum = 0;
-
-    evaluationGrades.forEach(item => {
-      weightedScoreSum += item.grade * item.weight;
-    });
-
-    const averageGrade = totalWeight > 0 
-      ? parseFloat((weightedScoreSum / totalWeight).toFixed(2)) 
-      : 0;
-
-    return {
-      averageGrade,
-      evaluations: evaluationGrades
-    };
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
