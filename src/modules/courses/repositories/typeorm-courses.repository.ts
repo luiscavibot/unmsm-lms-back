@@ -192,6 +192,19 @@ export class TypeormCoursesRepository implements ICourseRepository {
         return BlockTypeInSpanish.PRACTICE;
     }
   }
+  
+  extractFileNameFromUrl(url: string): string {
+    if (!url) return '';
+    
+    try {
+      const urlWithoutParams = url.split('?')[0];
+      const segments = urlWithoutParams.split('/');
+      const fileName = segments[segments.length - 1];
+      return decodeURIComponent(fileName);
+    } catch (error) {
+      return '';
+    }
+  }
 
   async getCourseDetail(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto> {
     // 1. Obtener información básica del curso y la oferta
@@ -317,6 +330,10 @@ export class TypeormCoursesRepository implements ICourseRepository {
         const blockGroupName = block?.type === BlockType.PRACTICE ? ` - Grupo ${block.group}` : '';
         const blockName = blockTypeName + blockGroupName;
 
+        // Extraer nombres de archivo de las URLs
+        const syllabusFileName = this.extractFileNameFromUrl(block.syllabusUrl);
+        const cvFileName = this.extractFileNameFromUrl(teacherCvUrl);
+
         // Crear el objeto de detalle del bloque
         return {
           blockId: block.blockId,
@@ -326,11 +343,11 @@ export class TypeormCoursesRepository implements ICourseRepository {
           aula: block.aula || '',
           teacher: blockTeacherName,
           syllabus: {
-            fileName: `syllabus-${block.type}${block.group ? `-grupo-${block.group}` : ''}.pdf`,
+            fileName: syllabusFileName,
             downloadUrl: block.syllabusUrl || '',
           },
           cv: {
-            fileName: `cv-profesor.pdf`,
+            fileName: cvFileName,
             downloadUrl: teacherCvUrl,
           },
           meetUrl: meetUrl,
