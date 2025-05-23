@@ -1,91 +1,86 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+  CognitoIdentityProviderClient,
+  ListUsersCommand,
+  AdminGetUserCommand,
+  AdminListGroupsForUserCommand,
+  AdminGetUserCommandInput,
+  GroupType,
+  UserType,
+} from '@aws-sdk/client-cognito-identity-provider';
+import { ConfigService } from '@nestjs/config';
 import { User } from '../entities/user.entity';
-import { CreateUserDto } from '../dtos/create-user.dto';
-import { UpdateUserDto } from '../dtos/update-user.dto';
-import { USER_REPOSITORY } from '../tokens';
-import { ROLE_REPOSITORY } from '../../roles/tokens';
-import { IUserRepository } from '../interfaces/user.repository.interface';
-import { IRoleRepository } from '../../roles/interfaces/role.repository.interface';
-import * as bcrypt from 'bcrypt';
+import { mapUserFromCognito } from '../helpers/user.mappers';
 
 @Injectable()
 export class UserService {
-  constructor(
-    @Inject(USER_REPOSITORY)
-    private readonly userRepository: IUserRepository,
-    @Inject(ROLE_REPOSITORY)
-    private readonly roleRepository: IRoleRepository,
-  ) {}
+  private readonly cognito = new CognitoIdentityProviderClient({
+    region: process.env.COGNITO_REGION,
+  });
 
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    if (createUserDto.roleId) {
-      const role = await this.roleRepository.findOne(createUserDto.roleId);
-      if (!role) {
-        throw new NotFoundException(`El rol con id ${createUserDto.roleId} no existe`);
+  constructor(private readonly config: ConfigService) {}
+
+  async findAll(
+    limit = 20,
+    paginationToken?: string,
+    withRole = false,
+  ): Promise<{ users: User[]; nextToken?: string }> {
+    try {
+      const userPoolId = this.config.get<string>('COGNITO_USER_POOL_ID');
+      const { Users: raw = [], PaginationToken: nextToken } = await this.cognito.send(
+        new ListUsersCommand({ UserPoolId: userPoolId, Limit: limit, PaginationToken: paginationToken }),
+      );
+
+      const users = await Promise.all(raw.map((u) => this.buildUser(u, withRole)));
+      return { users, nextToken };
+    } catch (err) {
+      throw new InternalServerErrorException('Error listando usuarios en Cognito', err);
+    }
+  }
+
+  async findOne(userId: string, withRole = false): Promise<User> {
+    const userPoolId = this.config.get<string>('COGNITO_USER_POOL_ID');
+    const input: AdminGetUserCommandInput = { UserPoolId: userPoolId, Username: userId };
+
+    try {
+      const {
+        Username,
+        UserAttributes = [],
+        Enabled,
+        UserStatus,
+      } = await this.cognito.send(new AdminGetUserCommand(input));
+
+      if (!Username) {
+        throw new NotFoundException(`Usuario '${userId}' no encontrado`);
       }
-    }
 
-    const existingUser = await this.userRepository.findByEmail(createUserDto.email);
-    if (existingUser) {
-      throw new NotFoundException('El correo electrónico ya está registrado');
-    }
+      const raw: UserType = {
+        Username,
+        Attributes: UserAttributes,
+        Enabled: Enabled!,
+        UserStatus: UserStatus!,
+      } as UserType;
 
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-    createUserDto.password = hashedPassword;
-
-    return await this.userRepository.create(createUserDto);
-  }
-
-  async findAll(): Promise<User[]> {
-    return await this.userRepository.findAll();
-  }
-
-  async findOne(id: string): Promise<User> {
-    const user = await this.userRepository.findOne(id);
-    if (!user) {
-      throw new NotFoundException(`Usuario con id ${id} no encontrado`);
-    }
-    return user;
-  }
-
-  async findByEmail(email: string): Promise<User> {
-    const user = await this.userRepository.findByEmail(email);
-    if (!user) {
-      throw new NotFoundException(`Usuario con correo electrónico ${email} no encontrado`);
-    }
-    return user;
-  }
-
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User | null> {
-    await this.findOne(id);
-    if (updateUserDto.roleId) {
-      const role = await this.roleRepository.findOne(updateUserDto.roleId);
-      if (!role) {
-        throw new NotFoundException(`El rol con id ${updateUserDto.roleId} no existe`);
+      return this.buildUser(raw, withRole);
+    } catch (err: any) {
+      if (err.name === 'UserNotFoundException') {
+        throw new NotFoundException(`Usuario '${userId}' no existe`);
       }
+      throw new InternalServerErrorException('Error obteniendo usuario de Cognito', err);
     }
-    if (updateUserDto.email) {
-      const existingUser = await this.userRepository.findByEmail(updateUserDto.email);
-      if (existingUser && existingUser.id !== id) {
-        throw new Error('El correo electrónico ya está registrado');
-      }
-    }
-
-    if (updateUserDto.password) {
-      const hashedPassword = await bcrypt.hash(updateUserDto.password, 10);
-      updateUserDto.password = hashedPassword;
-    }
-
-    return this.userRepository.update(id, updateUserDto);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.findOne(id);
-    return this.userRepository.delete(id);
-  }
+  private async buildUser(raw: UserType, withRole: boolean): Promise<User> {
+    const userPoolId = this.config.get<string>('COGNITO_USER_POOL_ID');
+    let groups: GroupType[] = [];
 
-  async updateProfileImage(id: string, imgUrl: string): Promise<User | null> {
-    await this.findOne(id);
-    return this.userRepository.update(id, { imgUrl });
+    if (withRole) {
+      const { Groups = [] } = await this.cognito.send(
+        new AdminListGroupsForUserCommand({ UserPoolId: userPoolId, Username: raw.Username! }),
+      );
+      groups = Groups;
+    }
+
+    return mapUserFromCognito(raw, groups);
   }
 }

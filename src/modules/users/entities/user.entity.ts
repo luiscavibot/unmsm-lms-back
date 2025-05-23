@@ -1,6 +1,7 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import { Role } from '../../roles/entities/role.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
+import { UserStatusType } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoGroup } from '../interfaces/cognito.interface';
 
 @Entity({ name: 'users' })
 export class User {
@@ -8,13 +9,10 @@ export class User {
   id: string;
 
   @Column({ nullable: true })
-  roleId: string;
+  roleId?: CognitoGroup;
 
   @Column({ length: 100 })
-  firstName: string;
-
-  @Column({ length: 100 })
-  lastName: string;
+  name: string;
 
   @Column({ unique: true })
   email: string;
@@ -29,6 +27,9 @@ export class User {
   @Column({ nullable: true, type: 'text' })
   resumeUrl?: string;
 
-  @ManyToOne(() => Role, { onDelete: 'SET NULL' })
-  role: Role;
+  @Column({ default: true })
+  enabled: boolean;
+
+  @Column({ default: 'ACTIVE' })
+  status: UserStatusType;
 }

@@ -138,7 +138,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
       // Crear el objeto de profesor
       const teacher = teacherAssignment
         ? {
-            name: `${teacherAssignment.user.firstName} ${teacherAssignment.user.lastName}`,
+            name: `${teacherAssignment.user.name}`,
             imgUrl: teacherAssignment.user.imgUrl || 'https://www.imagen.com',
           }
         : {
@@ -192,10 +192,10 @@ export class TypeormCoursesRepository implements ICourseRepository {
         return BlockTypeInSpanish.PRACTICE;
     }
   }
-  
+
   extractFileNameFromUrl(url: string): string {
     if (!url) return '';
-    
+
     try {
       const urlWithoutParams = url.split('?')[0];
       const segments = urlWithoutParams.split('/');
@@ -231,9 +231,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
       .leftJoinAndSelect('blockAssignment.user', 'user')
       .getOne();
 
-    const teacherName = teacherAssignment
-      ? `${teacherAssignment.user.firstName} ${teacherAssignment.user.lastName}`
-      : 'Sin profesor asignado';
+    const teacherName = teacherAssignment ? `${teacherAssignment.user.name}` : 'Sin profesor asignado';
 
     // 3. Obtener los bloques del curso
     const blocksQuery = await this.blockAssignmentRepository
@@ -266,7 +264,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
 
         // Si hay un profesor colaborador para este bloque, usar su información
         if (blockTeacherAssignment) {
-          blockTeacherName = `${blockTeacherAssignment.user.firstName} ${blockTeacherAssignment.user.lastName}`;
+          blockTeacherName = `${blockTeacherAssignment.user.name}`;
           teacherCvUrl = blockTeacherAssignment.user.resumeUrl || '';
         } else if (teacherAssignment) {
           // Si no hay colaborador, usar la información del responsable para el CV
