@@ -4,12 +4,14 @@ import { Repository } from 'typeorm';
 import { Material } from '../entities/material.entity';
 import { IMaterialRepository } from '../interfaces/material.repository.interface';
 import { MaterialType } from '../enums/material-type.enum';
+import { UserService } from 'src/modules/users/services/user.service';
 
 @Injectable()
 export class TypeormMaterialsRepository implements IMaterialRepository {
   constructor(
     @InjectRepository(Material)
     private readonly materialRepository: Repository<Material>,
+    private readonly userService: UserService,
   ) {}
 
   async create(material: Material): Promise<Material> {
@@ -37,10 +39,11 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
   }
 
   async findByBlockId(blockId: string): Promise<any[]> {
-    const query = this.materialRepository.createQueryBuilder('material')
+    const query = this.materialRepository
+      .createQueryBuilder('material')
       .innerJoin('material.week', 'week')
       .innerJoin('week.block', 'block')
-      .leftJoin('material.uploadedBy', 'user')
+      // .leftJoin('material.uploadedBy', 'user')
       .where('block.id = :blockId', { blockId })
       .select([
         'week.id as weekId',
@@ -50,55 +53,57 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
         'material.type as materialType',
         'material.date as uploadDate',
         'material.uploadedById as uploadedById',
-        'user.firstName as userFirstName',
-        'user.lastName as userLastName',
-        'material.fileUrl as materialUrl'
+        // 'user.firstName as userFirstName',
+        // 'user.lastName as userLastName',
+        'material.fileUrl as materialUrl',
       ])
       .orderBy('week.number', 'DESC')
       .addOrderBy('material.title', 'ASC');
 
     const materialsData = await query.getRawMany();
-    
+
     // Procesar los datos para el formato de respuesta requerido
     const weekMap = new Map();
-    
+
     for (const item of materialsData) {
+      console.log('item', JSON.stringify(item, null, 2));
       if (!weekMap.has(item.weekId)) {
         const weekName = `Semana ${item.weekNumber}`;
         weekMap.set(item.weekId, {
           id: item.weekId,
           week: weekName,
           weekNumber: item.weekNumber,
-          materials: []
+          materials: [],
         });
       }
-      
+
       const week = weekMap.get(item.weekId);
-      
+
       // Extraer el nombre del archivo de la URL
       let materialName = '';
       if (item.materialUrl) {
         const urlParts = item.materialUrl.split('/');
         materialName = urlParts[urlParts.length - 1];
       }
-      
+
       // Formatear la fecha
       const uploadDate = item.uploadDate ? new Date(item.uploadDate).toISOString().split('T')[0] : '';
-      
+
+      const userName = await this.userService.findOne(item.uploadedById);
+
       week.materials.push({
         materialId: item.materialId,
         name: item.name,
         materialType: item.materialType,
         uploadDate: uploadDate,
         uploadedById: item.uploadedById,
-        uploadedByName: item.userFirstName && item.userLastName 
-          ? `${item.userFirstName} ${item.userLastName}` 
-          : '',
+        // uploadedByName: item.userFirstName && item.userLastName ? `${item.userFirstName} ${item.userLastName}` : '',
+        uploadedByName: userName.name,
         materialUrl: item.materialUrl,
-        materialName: materialName
+        materialName: materialName,
       });
     }
-    
+
     // Convertir el mapa a un array
     return Array.from(weekMap.values());
   }
