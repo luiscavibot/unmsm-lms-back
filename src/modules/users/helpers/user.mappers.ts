@@ -14,7 +14,7 @@ export const mapUserFromCognito = (u: CognitoUser, g: GroupType[] = []): User =>
   };
 
   if (g.length > 0) {
-    user.roleId = g[0].GroupName as CognitoGroup;
+    user.roleName = g[0].GroupName as CognitoGroup;
   }
 
   return user;

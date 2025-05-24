@@ -9,7 +9,7 @@ export class User {
   id: string;
 
   @Column({ nullable: true })
-  roleId?: CognitoGroup;
+  roleName?: CognitoGroup;
 
   @Column({ length: 100 })
   name: string;

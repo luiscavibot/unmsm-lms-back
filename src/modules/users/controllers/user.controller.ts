@@ -1,8 +1,9 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { UserService } from '../services/user.service';
-import { ApiGetUser, ApiListUsers } from '../decorators/swagger.decorators';
+import { ApiCreateUser, ApiGetUser, ApiListUsers } from '../decorators/swagger.decorators';
 import { User } from '../entities/user.entity';
 import { FindUserQueryDto, FindUsersQueryDto } from '../dtos/user-request.dto';
+import { CreateUserDto } from '../dtos/create-user.dto';
 
 @Controller('users')
 export class UserController {
@@ -20,7 +21,16 @@ export class UserController {
   @Get(':userId')
   @ApiGetUser()
   async findOne(@Param('userId') userId: string, @Query() { withRole = false }: FindUserQueryDto): Promise<User> {
-    console.log('withRole en UserIs->', withRole);
     return this.userService.findOne(userId, withRole);
+  }
+
+  @Post()
+  @ApiCreateUser()
+  async create(@Body() dto: CreateUserDto) {
+    const { email } = await this.userService.create(dto);
+    return {
+      message: 'Usuario creado. Se envió invitación por email.',
+      email,
+    };
   }
 }

@@ -32,3 +32,19 @@ export function ApiGetUser() {
     ApiExtraModels(FindUserQueryDto),
   );
 }
+
+export function ApiCreateUser() {
+  return applyDecorators(
+    ApiOperation({ summary: 'Crear un nuevo usuario y enviar invitación por email' }),
+    ApiResponse({
+      status: 201,
+      description: 'Usuario creado correctamente',
+      schema: {
+        properties: {
+          message: { type: 'string', example: 'Usuario creado. Se envió invitación por email.' },
+          email: { type: 'string', example: 'usuario@ejemplo.com' },
+        },
+      },
+    }),
+  );
+}
