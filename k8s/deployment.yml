@@ -12,6 +12,7 @@ spec:
       labels:
         app: biologia-lms-apirest-app
     spec:
+      serviceAccountName: biologia-lms-apirest-sa
       containers:
         - name: biologia-lms-apirest-container
           image: 365227208102.dkr.ecr.us-east-2.amazonaws.com/biologia-lms-apirest:latest
