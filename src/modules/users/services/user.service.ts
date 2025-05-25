@@ -91,21 +91,19 @@ export class UserService {
     const { email, name, roleName } = dto;
     const userPoolId = this.config.get<string>('COGNITO_USER_POOL_ID');
 
-    // 1) Crear usuario y enviar invitación (Cognito genera la contraseña temporal)
     const createCmd = new AdminCreateUserCommand({
       UserPoolId: userPoolId,
       Username: email,
-      MessageAction: 'RESEND', // envía invitación por email
       UserAttributes: [
         { Name: 'email', Value: email },
         { Name: 'email_verified', Value: 'true' },
         { Name: 'name', Value: name },
       ],
     });
-
     try {
       await this.cognito.send(createCmd);
     } catch (err) {
+      console.error('Error creando usuario en Cognito:', err);
       throw new InternalServerErrorException('Error al crear usuario en Cognito', err);
     }
 

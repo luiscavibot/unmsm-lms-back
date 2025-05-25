@@ -27,6 +27,7 @@ export class UserController {
   @Post()
   @ApiCreateUser()
   async create(@Body() dto: CreateUserDto) {
+    // console.log('Creating user with data:', dto);
     const { email } = await this.userService.create(dto);
     return {
       message: 'Usuario creado. Se envió invitación por email.',
