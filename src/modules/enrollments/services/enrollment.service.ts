@@ -17,7 +17,7 @@ export class EnrollmentService {
   ) {}
 
   async create(createEnrollmentDto: CreateEnrollmentDto): Promise<Enrollment> {
-    await this.userService.findOne(createEnrollmentDto.userId);
+    const user = await this.userService.findOne(createEnrollmentDto.userId);
     await this.courseOfferingService.findOne(createEnrollmentDto.courseOfferingId);
     return await this.enrollmentRepository.create(createEnrollmentDto as Enrollment);
   }

@@ -7,10 +7,7 @@ export class Enrollment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, { onDelete: 'SET NULL' })
-  user: User;
-
-  @Column({ nullable: true })
+  @Column()
   userId: string;
 
   @ManyToOne(() => CourseOffering, { onDelete: 'SET NULL' })

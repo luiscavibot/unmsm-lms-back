@@ -119,7 +119,7 @@ export class UserService {
     } catch (err) {
       throw new InternalServerErrorException('Error al asignar rol en Cognito', err);
     }
-
+    //TODO: retornar userId
     return { email };
   }
 }
