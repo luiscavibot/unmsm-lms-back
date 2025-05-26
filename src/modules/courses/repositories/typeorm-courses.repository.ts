@@ -15,6 +15,8 @@ import { BlockAssignment } from '../../block-assignments/entities/block-assignme
 import { BlockRolType } from '../../block-assignments/enums/block-rol-type.enum';
 import { CourseDetailResponseDto } from '../dtos/course-detail-response.dto';
 import { BlockType, BlockTypeInSpanish } from 'src/modules/blocks/enums/block-type.enum';
+import { UserService } from '../../users/services/user.service';
+import { User } from '../../users/entities/user.entity';
 
 @Injectable()
 export class TypeormCoursesRepository implements ICourseRepository {
@@ -25,6 +27,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
     private readonly enrollmentRepository: Repository<Enrollment>,
     @InjectRepository(BlockAssignment)
     private readonly blockAssignmentRepository: Repository<BlockAssignment>,
+    private readonly userService: UserService
   ) {}
 
   async create(course: Course): Promise<Course> {
@@ -128,23 +131,31 @@ export class TypeormCoursesRepository implements ICourseRepository {
       }
 
       // Buscar el profesor responsable para este course offering
-      const teacherAssignment = await this.blockAssignmentRepository
-        .createQueryBuilder('blockAssignment')
-        .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId: courseOffering.id })
-        .andWhere('blockAssignment.blockRol = :blockRol', { blockRol: BlockRolType.RESPONSIBLE })
-        .leftJoinAndSelect('blockAssignment.user', 'user')
-        .getOne();
+      const teacherAssignment = await this.blockAssignmentRepository.findOne({
+        where: { 
+          courseOfferingId: courseOffering.id,
+          blockRol: BlockRolType.RESPONSIBLE 
+        }
+      });
 
       // Crear el objeto de profesor
-      const teacher = teacherAssignment
-        ? {
-            name: `${teacherAssignment.user.name}`,
-            imgUrl: teacherAssignment.user.imgUrl || 'https://www.imagen.com',
-          }
-        : {
-            name: 'Sin profesor asignado',
-            imgUrl: 'https://www.imagen.com',
+      let teacher = {
+        name: 'Sin profesor asignado',
+        imgUrl: 'https://www.imagen.com',
+      };
+
+      if (teacherAssignment) {
+        try {
+          // Obtener la información del usuario desde Cognito
+          const user = await this.userService.findOne(teacherAssignment.userId);
+          teacher = {
+            name: user.name,
+            imgUrl: user.imgUrl || 'https://www.imagen.com',
           };
+        } catch (error) {
+          console.error('Error al obtener información del usuario:', error);
+        }
+      }
 
       // Formatear las fechas
       const startDate = new Date(courseOffering.startDate);
@@ -224,14 +235,27 @@ export class TypeormCoursesRepository implements ICourseRepository {
     }
 
     // 2. Obtener el profesor responsable del curso
-    const teacherAssignment = await this.blockAssignmentRepository
-      .createQueryBuilder('blockAssignment')
-      .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId })
-      .andWhere('blockAssignment.blockRol = :blockRol', { blockRol: BlockRolType.RESPONSIBLE })
-      .leftJoinAndSelect('blockAssignment.user', 'user')
-      .getOne();
+    const teacherAssignment = await this.blockAssignmentRepository.findOne({
+      where: {
+        courseOfferingId,
+        blockRol: BlockRolType.RESPONSIBLE
+      }
+    });
 
-    const teacherName = teacherAssignment ? `${teacherAssignment.user.name}` : 'Sin profesor asignado';
+    let teacherName = 'Sin profesor asignado';
+    let teacherResumeUrl = '';
+    let responsibleTeacher: User | null = null;
+    
+    if (teacherAssignment) {
+      try {
+        // Obtener la información del usuario desde Cognito
+        responsibleTeacher = await this.userService.findOne(teacherAssignment.userId);
+        teacherName = responsibleTeacher.name;
+        teacherResumeUrl = responsibleTeacher.resumeUrl || '';
+      } catch (error) {
+        console.error('Error al obtener información del profesor:', error);
+      }
+    }
 
     // 3. Obtener los bloques del curso
     const blocksQuery = await this.blockAssignmentRepository
@@ -251,24 +275,30 @@ export class TypeormCoursesRepository implements ICourseRepository {
     const blocksDetails = await Promise.all(
       blocksQuery.map(async (block) => {
         // Obtener información del profesor del bloque (si es collaborator)
-        const blockTeacherAssignment = await this.blockAssignmentRepository
-          .createQueryBuilder('blockAssignment')
-          .where('blockAssignment.blockId = :blockId', { blockId: block.blockId })
-          .andWhere('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId })
-          .andWhere('blockAssignment.blockRol = :blockRol', { blockRol: BlockRolType.COLLABORATOR })
-          .leftJoinAndSelect('blockAssignment.user', 'user')
-          .getOne();
+        const blockTeacherAssignment = await this.blockAssignmentRepository.findOne({
+          where: {
+            blockId: block.blockId,
+            courseOfferingId: courseOfferingId,
+            blockRol: BlockRolType.COLLABORATOR
+          }
+        });
 
         let blockTeacherName: string | null = null;
         let teacherCvUrl: string = '';
 
+
         // Si hay un profesor colaborador para este bloque, usar su información
         if (blockTeacherAssignment) {
-          blockTeacherName = `${blockTeacherAssignment.user.name}`;
-          teacherCvUrl = blockTeacherAssignment.user.resumeUrl || '';
-        } else if (teacherAssignment) {
+          try {
+            const blockTeacherUser = await this.userService.findOne(blockTeacherAssignment.userId);
+            blockTeacherName = blockTeacherUser.name;
+            teacherCvUrl = blockTeacherUser.resumeUrl || '';
+          } catch (error) {
+            console.error('Error al obtener información del profesor del bloque:', error);
+          }
+        } else if (responsibleTeacher) {
           // Si no hay colaborador, usar la información del responsable para el CV
-          teacherCvUrl = teacherAssignment.user.resumeUrl || '';
+          teacherCvUrl = responsibleTeacher.resumeUrl || '';
         }
 
         // Determinar la semana actual
