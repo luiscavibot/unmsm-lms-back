@@ -14,6 +14,7 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '../entities/user.entity';
 import { mapUserFromCognito } from '../helpers/user.mappers';
 import { CreateUserDto } from '../dtos/create-user.dto';
+import * as generator from 'generate-password';
 
 @Injectable()
 export class UserService {
@@ -87,39 +88,78 @@ export class UserService {
     return mapUserFromCognito(raw, groups);
   }
 
-  async create(dto: CreateUserDto): Promise<{ email: string }> {
+  async create(dto: CreateUserDto): Promise<{
+    userId: string;
+    email: string;
+    roleName: string;
+    name: string;
+    password: string;
+  }> {
     const { email, name, roleName } = dto;
     const userPoolId = this.config.get<string>('COGNITO_USER_POOL_ID');
+    let userId: string;
 
-    const createCmd = new AdminCreateUserCommand({
-      UserPoolId: userPoolId,
-      Username: email,
-      UserAttributes: [
-        { Name: 'email', Value: email },
-        { Name: 'email_verified', Value: 'true' },
-        { Name: 'name', Value: name },
-      ],
+    const tempPassword = generator.generate({
+      length: 12,
+      numbers: true,
+      uppercase: true,
+      lowercase: true,
+      symbols: false,
     });
+
     try {
-      await this.cognito.send(createCmd);
+      await this.cognito.send(
+        new AdminCreateUserCommand({
+          UserPoolId: userPoolId,
+          Username: email,
+          TemporaryPassword: tempPassword,
+          MessageAction: 'SUPPRESS',
+          UserAttributes: [
+            { Name: 'email', Value: email },
+            { Name: 'email_verified', Value: 'true' },
+            { Name: 'name', Value: name },
+          ],
+        }),
+      );
     } catch (err) {
       console.error('Error creando usuario en Cognito:', err);
-      throw new InternalServerErrorException('Error al crear usuario en Cognito', err);
+      throw new InternalServerErrorException('No se pudo crear el usuario en Cognito', err);
     }
-
-    // 2) Añadir usuario al grupo correspondiente (STUDENT o TEACHER)
-    const addGroupCmd = new AdminAddUserToGroupCommand({
-      UserPoolId: userPoolId,
-      Username: email,
-      GroupName: roleName,
-    });
 
     try {
-      await this.cognito.send(addGroupCmd);
+      const getUser = await this.cognito.send(
+        new AdminGetUserCommand({
+          UserPoolId: userPoolId,
+          Username: email,
+        }),
+      );
+      userId = getUser.Username!;
     } catch (err) {
-      throw new InternalServerErrorException('Error al asignar rol en Cognito', err);
+      console.error('Error obteniendo el ID del usuario en Cognito:', err);
+      throw new InternalServerErrorException('No se pudo recuperar el ID del usuario', err);
     }
-    //TODO: retornar userId
-    return { email };
+
+    try {
+      await this.cognito.send(
+        new AdminAddUserToGroupCommand({
+          UserPoolId: userPoolId,
+          Username: email,
+          GroupName: roleName,
+        }),
+      );
+    } catch (err) {
+      console.error('Error asignando rol en Cognito:', err);
+      throw new InternalServerErrorException('No se pudo asignar el rol al usuario', err);
+    }
+
+    console.log(`Usuario creado: ${email} (userId=${userId}) rol=${roleName} pass=${tempPassword}`);
+
+    return {
+      userId,
+      email,
+      roleName,
+      name,
+      password: tempPassword,
+    };
   }
 }

@@ -3,7 +3,7 @@ import { IsNotEmpty, IsUUID } from 'class-validator';
 
 export class CreateEnrollmentDto {
   @IsNotEmpty()
-  @IsUUID()
+  // @IsUUID()
   @ApiProperty({
     description: 'ID del usuario',
     example: '123e4567-e89b-12d3-a456-426614174000',
