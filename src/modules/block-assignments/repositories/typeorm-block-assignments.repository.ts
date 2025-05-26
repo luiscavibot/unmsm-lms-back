@@ -18,35 +18,35 @@ export class TypeormBlockAssignmentsRepository implements IBlockAssignmentReposi
 
   async findAll(): Promise<BlockAssignment[]> {
     return await this.repository.find({
-      relations: ['user', 'block', 'courseOffering'],
+      relations: ['block', 'courseOffering'],
     });
   }
 
   async findByCompositeId(userId: string, blockId: string, courseOfferingId: string): Promise<BlockAssignment | null> {
     return await this.repository.findOne({
       where: { userId, blockId, courseOfferingId },
-      relations: ['user', 'block', 'courseOffering'],
+      relations: ['block', 'courseOffering'],
     });
   }
 
   async findByUserId(userId: string): Promise<BlockAssignment[]> {
     return await this.repository.find({
       where: { userId },
-      relations: ['user', 'block', 'courseOffering'],
+      relations: ['block', 'courseOffering'],
     });
   }
 
   async findByBlockId(blockId: string): Promise<BlockAssignment[]> {
     return await this.repository.find({
       where: { blockId },
-      relations: ['user', 'block', 'courseOffering'],
+      relations: ['block', 'courseOffering'],
     });
   }
 
   async findByCourseOfferingId(courseOfferingId: string): Promise<BlockAssignment[]> {
     return await this.repository.find({
       where: { courseOfferingId },
-      relations: ['user', 'block', 'courseOffering'],
+      relations: ['block', 'courseOffering'],
     });
   }
 

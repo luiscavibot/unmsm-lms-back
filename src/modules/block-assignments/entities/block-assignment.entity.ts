@@ -1,5 +1,4 @@
 import { Column, Entity, ManyToOne, PrimaryColumn } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 import { Block } from '../../blocks/entities/block.entity';
 import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
 import { BlockRolType } from '../enums/block-rol-type.enum';
@@ -14,9 +13,6 @@ export class BlockAssignment {
 
   @PrimaryColumn()
   courseOfferingId: string;
-
-  @ManyToOne(() => User, { onDelete: 'CASCADE' })
-  user: User;
 
   @ManyToOne(() => Block, { onDelete: 'CASCADE' })
   block: Block;
