@@ -152,8 +152,6 @@ export class UserService {
       throw new InternalServerErrorException('No se pudo asignar el rol al usuario', err);
     }
 
-    console.log(`Usuario creado: ${email} (userId=${userId}) rol=${roleName} pass=${tempPassword}`);
-
     return {
       userId,
       email,
