@@ -30,9 +30,6 @@ export class Material {
   @Column({ nullable: true })
   uploadedById: string;
 
-  @ManyToOne(() => User, { onDelete: 'SET NULL' })
-  uploadedBy: User;
-
   @ManyToOne(() => Week, { onDelete: 'SET NULL' })
   week: Week;
 }
