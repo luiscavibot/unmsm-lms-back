@@ -23,7 +23,10 @@ export class CreateClassSessionDto {
     description: 'Fecha de la sesión de clase',
     example: '2024-01-20'
   })
-  @Transform(({ value }) => new Date(value))
+  @Transform(({ value }) => {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0);
+  })
   @IsDate()
   @IsNotEmpty()
   sessionDate: Date;

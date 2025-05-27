@@ -216,6 +216,10 @@ export class TypeormCoursesRepository implements ICourseRepository {
       return '';
     }
   }
+  
+  padZero(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
+  }
 
   async getCourseDetail(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto> {
     // 1. Obtener información básica del curso y la oferta
@@ -310,7 +314,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
         // Obtener el último día de la semana (domingo)
         const endOfWeek = new Date(startOfWeek);
         endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
+        endOfWeek.setHours(11, 59, 59, 999);
 
         // Obtener las sesiones de clase para este bloque en la semana actual
         const classSessions = await this.blockAssignmentRepository
@@ -336,7 +340,8 @@ export class TypeormCoursesRepository implements ICourseRepository {
           const sessionDate = new Date(session.sessionDate);
           const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
           const dayName = dayNames[sessionDate.getDay()];
-          return `${dayName}: ${session.startTime.substring(0, 5)} - ${session.endTime.substring(0, 5)}`;
+          const formattedDate = `${this.padZero(sessionDate.getDate())}-${this.padZero(sessionDate.getMonth() + 1)}`;
+          return `${dayName} ${formattedDate} / ${session.startTime.substring(0, 5)} - ${session.endTime.substring(0, 5)}`;
         });
 
         // Encontrar la próxima sesión para obtener la URL de la sala virtual
