@@ -44,7 +44,8 @@ export class CourseController {
     @CurrentUserToken() user: UserPayload,
     @Query() filters: CoursesByProgramTypeDto,
   ): Promise<CoursesByProgramTypeResponseDto> {
-    return await this.courseService.findCoursesByProgramType(user.userId, filters, user.rolName!);
+    const rolName = user.rolName || UserRoles.STUDENT;
+    return await this.courseService.findCoursesByProgramType(user.userId, filters, rolName);
   }
 
   @Get('detail/:courseOfferingId')
@@ -63,7 +64,8 @@ export class CourseController {
     @Param('courseOfferingId') courseOfferingId: string,
     @CurrentUserToken() user: UserPayload,
   ): Promise<CourseDetailResponseDto> {
-    return await this.courseService.getCourseDetail(courseOfferingId, user.userId);
+    const rolName = user.rolName || UserRoles.STUDENT;
+    return await this.courseService.getCourseDetail(courseOfferingId, user.userId, rolName);
   }
 
   @Get(':id')

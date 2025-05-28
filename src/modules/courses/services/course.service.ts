@@ -44,12 +44,12 @@ export class CourseService {
   async findCoursesByProgramType(
     userId: string, 
     filters: CoursesByProgramTypeDto, 
-    roleName: string
+    roleName?: string
   ): Promise<CoursesByProgramTypeResponseDto> {
     return await this.courseRepository.findCoursesByProgramType(userId, filters, roleName);
   }
 
-  async getCourseDetail(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto> {
-    return await this.courseRepository.getCourseDetail(courseOfferingId, userId);
+  async getCourseDetail(courseOfferingId: string, userId: string, roleName?: string): Promise<CourseDetailResponseDto> {
+    return await this.courseRepository.getCourseDetail(courseOfferingId, userId, roleName);
   }
 }

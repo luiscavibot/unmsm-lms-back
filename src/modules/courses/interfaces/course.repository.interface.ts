@@ -9,6 +9,6 @@ export interface ICourseRepository {
   findOne(id: string): Promise<Course | null>;
   update(id: string, course: Partial<Course>): Promise<Course | null>;
   delete(id: string): Promise<void>;
-  findCoursesByProgramType(userId: string, filters: CoursesByProgramTypeDto, roleName: string): Promise<CoursesByProgramTypeResponseDto>;
-  getCourseDetail(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto>;
+  findCoursesByProgramType(userId: string, filters: CoursesByProgramTypeDto, roleName?: string): Promise<CoursesByProgramTypeResponseDto>;
+  getCourseDetail(courseOfferingId: string, userId: string, roleName?: string): Promise<CourseDetailResponseDto>;
 }

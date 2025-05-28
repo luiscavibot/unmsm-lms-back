@@ -3,12 +3,18 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Enrollment } from '../../enrollments/entities/enrollment.entity';
 import { BlockAssignment } from '../../block-assignments/entities/block-assignment.entity';
-import { BlockRolType } from '../../block-assignments/enums/block-rol-type.enum';
+import { BlockRolType } from 'src/modules/block-assignments/enums/block-rol-type.enum';
 import { CourseDetailResponseDto } from '../dtos/course-detail-response.dto';
 import { BlockType } from '../../blocks/enums/block-type.enum';
 import { UserService } from '../../users/services/user.service';
 import { User } from '../../users/entities/user.entity';
 import { CourseUtils } from '../../../utils/course-utils';
+import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
+
+export enum UserRoles {
+  STUDENT = 'STUDENT',
+  TEACHER = 'TEACHER',
+}
 
 @Injectable()
 export class GetCourseDetailQuery {
@@ -17,11 +23,13 @@ export class GetCourseDetailQuery {
     private readonly enrollmentRepository: Repository<Enrollment>,
     @InjectRepository(BlockAssignment)
     private readonly blockAssignmentRepository: Repository<BlockAssignment>,
+    @InjectRepository(CourseOffering)
+    private readonly courseOfferingRepository: Repository<CourseOffering>,
     private readonly userService: UserService,
   ) {}
 
   /**
-   * Obtiene la información básica del curso y la oferta
+   * Obtiene la información básica del curso y la oferta para estudiantes
    */
   private async getBasicCourseInfo(courseOfferingId: string, userId: string) {
     const courseOfferingQuery = this.enrollmentRepository
@@ -40,6 +48,37 @@ export class GetCourseDetailQuery {
     }
 
     return enrollmentData;
+  }
+
+  /**
+   * Obtiene la información básica del curso y la oferta para profesores
+   */
+  private async getBasicCourseInfoForTeacher(courseOfferingId: string, userId: string) {
+    // Verificar que el profesor esté asignado a este curso
+    const teacherAssignment = await this.blockAssignmentRepository
+      .createQueryBuilder('blockAssignment')
+      .where('blockAssignment.userId = :userId', { userId })
+      .andWhere('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId })
+      .getOne();
+
+    if (!teacherAssignment) {
+      throw new NotFoundException(`El profesor no está asignado a este curso`);
+    }
+
+    // Obtener información básica del curso
+    const courseOffering = await this.courseOfferingRepository
+      .createQueryBuilder('courseOffering')
+      .where('courseOffering.id = :courseOfferingId', { courseOfferingId })
+      .leftJoinAndSelect('courseOffering.program', 'program')
+      .leftJoinAndSelect('courseOffering.course', 'course')
+      .leftJoinAndSelect('courseOffering.semester', 'semester')
+      .getOne();
+
+    if (!courseOffering) {
+      throw new NotFoundException(`No se encontró la oferta de curso`);
+    }
+
+    return { courseOffering };
   }
 
   /**
@@ -72,9 +111,13 @@ export class GetCourseDetailQuery {
 
   /**
    * Obtiene los bloques básicos del curso
+   * @param courseOfferingId ID de la oferta de curso
+   * @param userId ID del usuario (usado solo cuando el rol es TEACHER)
+   * @param roleName Rol del usuario (STUDENT o TEACHER)
    */
-  private async getBasicBlocksInfo(courseOfferingId: string) {
-    return await this.blockAssignmentRepository
+  private async getBasicBlocksInfo(courseOfferingId: string, userId?: string, roleName?: string) {
+    // Consulta base
+    let query = this.blockAssignmentRepository
       .createQueryBuilder('blockAssignment')
       .distinctOn(['block.id'])
       .select('block.id', 'blockId')
@@ -83,8 +126,26 @@ export class GetCourseDetailQuery {
       .addSelect('block.classroomNumber', 'aula')
       .addSelect('block.syllabusUrl', 'syllabusUrl')
       .innerJoin('blockAssignment.block', 'block')
-      .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId })
-      .getRawMany();
+      .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId });
+    
+    // Si es profesor, aplicamos filtros adicionales según su rol
+    if (roleName === UserRoles.TEACHER && userId) {
+      // Primero verificamos si es profesor responsable
+      const isResponsible = await this.blockAssignmentRepository.findOne({
+        where: {
+          userId,
+          courseOfferingId,
+          blockRol: BlockRolType.RESPONSIBLE
+        }
+      });
+      
+      // Si no es responsable, solo mostramos los bloques donde está como colaborador
+      if (!isResponsible) {
+        query.andWhere('blockAssignment.userId = :userId', { userId });
+      }
+    }
+    
+    return await query.getRawMany();
   }
 
   /**
@@ -236,33 +297,68 @@ export class GetCourseDetailQuery {
   /**
    * Ejecuta la consulta para obtener los detalles completos del curso
    */
-  async execute(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto> {
-    // 1. Obtener información básica del curso y la oferta
-    const enrollmentData = await this.getBasicCourseInfo(courseOfferingId, userId);
+  async execute(courseOfferingId: string, userId: string, roleName: string = UserRoles.STUDENT): Promise<CourseDetailResponseDto> {
+    let courseName: string;
+    let programName: string;
+    let startDate: string;
+    let endDate: string;
+    let semester: string;
+    let teacherName: string;
+    let endNote: number | null = null;
 
-    // 2. Obtener el profesor responsable del curso
-    const { teacherName, responsibleTeacher } = await this.getResponsibleTeacher(courseOfferingId);
+    if (roleName === UserRoles.TEACHER) {
+      // Flujo para profesores
+      const { courseOffering } = await this.getBasicCourseInfoForTeacher(courseOfferingId, userId);
+      
+      courseName = courseOffering.course.name;
+      programName = courseOffering.program.name;
+      startDate = courseOffering.startDate.toISOString().split('T')[0];
+      endDate = courseOffering.endDate.toISOString().split('T')[0];
+      semester = `${courseOffering.semester.year}-${courseOffering.semester.name}`;
+      
+      // Obtener el profesor responsable
+      const { teacherName: responsibleTeacher } = await this.getResponsibleTeacher(courseOfferingId);
+      teacherName = responsibleTeacher;
+      
+    } else {
+      // Flujo para estudiantes (original)
+      const enrollmentData = await this.getBasicCourseInfo(courseOfferingId, userId);
+      
+      courseName = enrollmentData.courseOffering.course.name;
+      programName = enrollmentData.courseOffering.program.name;
+      startDate = enrollmentData.courseOffering.startDate.toISOString().split('T')[0];
+      endDate = enrollmentData.courseOffering.endDate.toISOString().split('T')[0];
+      semester = `${enrollmentData.courseOffering.semester.year}-${enrollmentData.courseOffering.semester.name}`;
+      endNote = enrollmentData.finalAverage;
+      
+      // Obtener el profesor responsable
+      const { teacherName: responsibleTeacher } = await this.getResponsibleTeacher(courseOfferingId);
+      teacherName = responsibleTeacher;
+    }
 
-    // 3. Obtener los bloques del curso
-    const blocksQuery = await this.getBasicBlocksInfo(courseOfferingId);
+    // Obtener el profesor responsable del curso para usar en la construcción de bloques
+    const { responsibleTeacher } = await this.getResponsibleTeacher(courseOfferingId);
 
-    // 4. Para cada bloque, obtener información detallada
+    // Obtener los bloques del curso
+    const blocksQuery = await this.getBasicBlocksInfo(courseOfferingId, userId, roleName);
+
+    // Para cada bloque, obtener información detallada
     const blocksDetails = await Promise.all(
       blocksQuery.map(async (block) => {
         return this.buildBlockDetails(block, courseOfferingId, responsibleTeacher);
       })
     );
 
-    // 5. Armar la respuesta completa
+    // Armar la respuesta completa
     return {
       courseId: courseOfferingId,
-      name: enrollmentData.courseOffering.course.name,
-      programName: enrollmentData.courseOffering.program.name,
-      startDate: enrollmentData.courseOffering.startDate.toISOString().split('T')[0],
-      endDate: enrollmentData.courseOffering.endDate.toISOString().split('T')[0],
-      semester: `${enrollmentData.courseOffering.semester.year}-${enrollmentData.courseOffering.semester.name}`,
+      name: courseName,
+      programName: programName,
+      startDate: startDate,
+      endDate: endDate,
+      semester: semester,
       teacher: teacherName,
-      endNote: enrollmentData.finalAverage,
+      endNote: endNote,
       blocks: blocksDetails,
     };
   }
