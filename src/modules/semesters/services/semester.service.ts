@@ -38,8 +38,8 @@ export class SemesterService {
     await this.semesterRepository.delete(id);
   }
 
-  async findByUserId(userId: string): Promise<Semester[]> {
+  async findByUserId(userId: string, roleName?: string): Promise<Semester[]> {
     const currentYear = new Date().getFullYear();
-    return await this.semesterRepository.findByUserId(userId, currentYear);
+    return await this.semesterRepository.findByUserId(userId, roleName, currentYear);
   }
 }

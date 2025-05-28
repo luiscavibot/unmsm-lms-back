@@ -50,7 +50,7 @@ export class SemesterController {
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ 
     summary: 'Obtener los semestres en los que el usuario está matriculado', 
-    description: 'Devuelve una lista única de semestres en los que el usuario actual está matriculado a través de ofertas de cursos, filtrando únicamente por el año actual y el año anterior'
+    description: 'Devuelve una lista única de semestres en los que el usuario actual está matriculado a través de ofertas de cursos o asignaciones de bloque, filtrando únicamente por el año actual y el año anterior'
   })
   @ApiResponse({ 
     status: 200, 
@@ -58,6 +58,8 @@ export class SemesterController {
     type: [Semester] 
   })
   async findByCurrentUser(@CurrentUserToken() user: UserPayload): Promise<Semester[]> {
-    return await this.semesterService.findByUserId(user.userId);
+    // Si rolName es null, se usará el valor predeterminado (STUDENT)
+    const roleName = user.rolName || undefined;
+    return await this.semesterService.findByUserId(user.userId, roleName);
   }
 }

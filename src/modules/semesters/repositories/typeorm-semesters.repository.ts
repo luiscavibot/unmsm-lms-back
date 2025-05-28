@@ -3,13 +3,28 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Semester } from '../entities/semester.entity';
 import { ISemesterRepository } from '../interfaces/semester.repository.interface';
+import { FindSemestersByUserIdQuery, UserRoles } from '../queries/find-semesters-by-user-id.query';
+import { Enrollment } from '../../enrollments/entities/enrollment.entity';
+import { BlockAssignment } from '../../block-assignments/entities/block-assignment.entity';
 
 @Injectable()
 export class TypeormSemestersRepository implements ISemesterRepository {
+  private readonly findSemestersByUserIdQuery: FindSemestersByUserIdQuery;
+
   constructor(
     @InjectRepository(Semester)
     private readonly semesterRepository: Repository<Semester>,
-  ) {}
+    @InjectRepository(Enrollment)
+    private readonly enrollmentRepository: Repository<Enrollment>,
+    @InjectRepository(BlockAssignment)
+    private readonly blockAssignmentRepository: Repository<BlockAssignment>,
+  ) {
+    this.findSemestersByUserIdQuery = new FindSemestersByUserIdQuery(
+      semesterRepository,
+      enrollmentRepository,
+      blockAssignmentRepository
+    );
+  }
 
   async create(semester: Partial<Semester>): Promise<Semester> {
     return await this.semesterRepository.save(semester);
@@ -34,22 +49,7 @@ export class TypeormSemestersRepository implements ISemesterRepository {
     await this.semesterRepository.delete(id);
   }
 
-  async findByUserId(userId: string, currentYear?: number): Promise<Semester[]> {
-    const actualYear = currentYear || new Date().getFullYear();
-    const lastYear = actualYear - 1;
-    
-    return await this.semesterRepository
-      .createQueryBuilder('semester')
-      .distinct(true)
-      .innerJoin('course_offerings', 'co', 'co.semesterId = semester.id')
-      .innerJoin('enrollments', 'e', 'e.courseOfferingId = co.id')
-      .where('e.userId = :userId', { userId })
-      .andWhere('semester.year >= :lastYear AND semester.year <= :actualYear', { 
-        lastYear,
-        actualYear 
-      })
-      .orderBy('semester.year', 'DESC')
-      .addOrderBy('semester.name', 'DESC')
-      .getMany();
+  async findByUserId(userId: string, roleName: string = UserRoles.STUDENT, currentYear?: number): Promise<Semester[]> {
+    return await this.findSemestersByUserIdQuery.execute(userId, roleName, currentYear);
   }
 }
