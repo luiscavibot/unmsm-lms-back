@@ -16,7 +16,7 @@ interface CognitoJwtPayload {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, StrategyType.JWT) {
   constructor(private readonly configService: ConfigService) {
-    const region = configService.get<string>('COGNITO_REGION');
+    const region = configService.get<string>('AWS_REGION');
     const userPoolId = configService.get<string>('COGNITO_USER_POOL_ID');
 
     super({

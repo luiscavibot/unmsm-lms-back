@@ -1,0 +1,1 @@
+export const FILES_REPOSITORY = Symbol('FILES_REPOSITORY');

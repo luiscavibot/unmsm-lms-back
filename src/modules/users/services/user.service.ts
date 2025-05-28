@@ -19,7 +19,7 @@ import * as generator from 'generate-password';
 @Injectable()
 export class UserService {
   private readonly cognito = new CognitoIdentityProviderClient({
-    region: process.env.COGNITO_REGION,
+    region: process.env.AWS_REGION,
   });
 
   constructor(private readonly config: ConfigService) {}

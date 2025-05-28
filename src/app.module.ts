@@ -19,6 +19,9 @@ import { EnrollmentBlockModule } from './modules/enrollment-blocks/enrollment-bl
 import { EvaluationsModule } from './modules/evaluations/evaluations.module';
 import { GradeModule } from './modules/grades/grade.module';
 import { WeeksModule } from './modules/weeks/weeks.module';
+import { AwsModule } from './common/aws/aws.module';
+import { StorageModule } from './common/storage/storage.module';
+import { FilesModule } from './modules/files/files.module';
 
 @Module({
   imports: [
@@ -44,6 +47,10 @@ import { WeeksModule } from './modules/weeks/weeks.module';
     EvaluationsModule,
     GradeModule,
     WeeksModule,
+    AwsModule,
+    StorageModule,
+    FilesModule,
   ],
+  providers: [],
 })
 export class AppModule {}
