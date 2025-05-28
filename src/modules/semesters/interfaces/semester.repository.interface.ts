@@ -6,5 +6,5 @@ export interface ISemesterRepository {
   findOne(id: string): Promise<Semester | null>;
   update(id: string, semester: Partial<Semester>): Promise<Semester | null>;
   delete(id: string): Promise<void>;
-  findByUserId(userId: string, currentYear?: number): Promise<Semester[]>;
+  findByUserId(userId: string, roleName?: string, currentYear?: number): Promise<Semester[]>;
 }
