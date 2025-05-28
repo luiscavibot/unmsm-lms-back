@@ -8,6 +8,7 @@ import { COURSE_REPOSITORY } from './tokens';
 import { Enrollment } from '../enrollments/entities/enrollment.entity';
 import { BlockAssignment } from '../block-assignments/entities/block-assignment.entity';
 import { Block } from '../blocks/entities/block.entity';
+import { CourseOffering } from '../course-offerings/entities/course-offering.entity';
 import { UsersModule } from '../users/users.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { UsersModule } from '../users/users.module';
       Enrollment, 
       BlockAssignment, 
       Block, 
+      CourseOffering,
     ]),
     UsersModule
   ],
