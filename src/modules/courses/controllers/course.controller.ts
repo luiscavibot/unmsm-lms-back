@@ -10,6 +10,7 @@ import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
 import { CourseDetailResponseDto } from '../dtos/course-detail-response.dto';
+import { UserRoles } from '../queries/find-courses-by-program-type.query';
 
 @Controller('courses')
 export class CourseController {
@@ -32,7 +33,7 @@ export class CourseController {
   @ApiOperation({
     summary: 'Obtener cursos agrupados por programa',
     description:
-      'Devuelve los cursos en los que el usuario está matriculado, agrupados por programa académico. Permite filtrado por tipo de programa, estado, semestre y búsqueda por texto.',
+      'Devuelve los cursos en los que el usuario está matriculado o enseña, agrupados por programa académico. Permite filtrado por tipo de programa, estado, semestre y búsqueda por texto.',
   })
   @ApiResponse({
     status: 200,
@@ -43,7 +44,7 @@ export class CourseController {
     @CurrentUserToken() user: UserPayload,
     @Query() filters: CoursesByProgramTypeDto,
   ): Promise<CoursesByProgramTypeResponseDto> {
-    return await this.courseService.findCoursesByProgramType(user.userId, filters);
+    return await this.courseService.findCoursesByProgramType(user.userId, filters, user.rolName!);
   }
 
   @Get('detail/:courseOfferingId')

@@ -41,8 +41,12 @@ export class CourseService {
     await this.courseRepository.delete(id);
   }
   
-  async findCoursesByProgramType(userId: string, filters: CoursesByProgramTypeDto): Promise<CoursesByProgramTypeResponseDto> {
-    return await this.courseRepository.findCoursesByProgramType(userId, filters);
+  async findCoursesByProgramType(
+    userId: string, 
+    filters: CoursesByProgramTypeDto, 
+    roleName: string
+  ): Promise<CoursesByProgramTypeResponseDto> {
+    return await this.courseRepository.findCoursesByProgramType(userId, filters, roleName);
   }
 
   async getCourseDetail(courseOfferingId: string, userId: string): Promise<CourseDetailResponseDto> {
