@@ -1,9 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { EnrollmentBlockService } from '../services/enrollment-block.service';
 import { CreateEnrollmentBlockDto } from '../dtos/create-enrollment-block.dto';
 import { UpdateEnrollmentBlockDto } from '../dtos/update-enrollment-block.dto';
 import { EnrollmentBlock } from '../entities/enrollment-block.entity';
+import { EnrolledStudentsResponseDto } from '../dtos/enrolled-students-response.dto';
+import { FindEnrolledStudentsQueryDto } from '../dtos/find-enrolled-students-query.dto';
+import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
+import { UserPayload } from '../../../common/auth/interfaces';
+import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
 
 @Controller('enrollment-blocks')
 export class EnrollmentBlockController {
@@ -19,6 +24,41 @@ export class EnrollmentBlockController {
   @ApiOperation({ summary: 'Obtener todas las relaciones entre inscripciones y bloques' })
   async findAll(): Promise<EnrollmentBlock[]> {
     return await this.enrollmentBlockService.findAll();
+  }
+
+  @Get('students/attendance/:blockId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ 
+    summary: 'Obtener todos los estudiantes matriculados en un bloque',
+    description: 'Devuelve una lista de estudiantes matriculados en un bloque específico con su asistencia en una fecha determinada o la asistencia más próxima si no se especifica fecha. Requiere autenticación de profesor asignado al bloque o responsable del curso.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de estudiantes matriculados',
+    type: EnrolledStudentsResponseDto
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'No tiene permisos para acceder a esta información'
+  })
+  @ApiQuery({ 
+    name: 'date', 
+    required: false, 
+    type: String, 
+    description: 'Fecha opcional para buscar la asistencia (formato YYYY-MM-DD)' 
+  })
+  async findEnrolledStudents(
+    @Param('blockId') blockId: string,
+    @Query() query: FindEnrolledStudentsQueryDto,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<EnrolledStudentsResponseDto> {
+    return await this.enrollmentBlockService.findEnrolledStudents(
+      blockId, 
+      query.date, 
+      user.userId, 
+      user.rolName
+    );
   }
 
   @Get('enrollment/:enrollmentId')

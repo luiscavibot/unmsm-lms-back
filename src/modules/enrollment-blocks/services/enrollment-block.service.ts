@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { EnrollmentBlock } from '../entities/enrollment-block.entity';
 import { IEnrollmentBlockRepository } from '../interfaces/enrollment-block.repository.interface';
 import { CreateEnrollmentBlockDto } from '../dtos/create-enrollment-block.dto';
@@ -6,6 +6,11 @@ import { UpdateEnrollmentBlockDto } from '../dtos/update-enrollment-block.dto';
 import { ENROLLMENT_BLOCK_REPOSITORY } from '../tokens';
 import { BlockService } from 'src/modules/blocks/services/block.service';
 import { EnrollmentService } from 'src/modules/enrollments/services/enrollment.service';
+import { FindEnrolledStudentsQuery } from '../queries/find-enrolled-students.query';
+import { EnrolledStudentsResponseDto } from '../dtos/enrolled-students-response.dto';
+import { BlockAssignmentService } from 'src/modules/block-assignments/services/block-assignment.service';
+import { EnrollmentPermissionResult, EnrollmentAccessType } from '../dtos/enrollment-permission.dto';
+import { BlockRolType } from 'src/modules/block-assignments/enums/block-rol-type.enum';
 
 @Injectable()
 export class EnrollmentBlockService {
@@ -14,6 +19,8 @@ export class EnrollmentBlockService {
     private readonly enrollmentBlockRepository: IEnrollmentBlockRepository,
     private readonly enrollmentService: EnrollmentService,
     private readonly blockService: BlockService,
+    private readonly findEnrolledStudentsQuery: FindEnrolledStudentsQuery,
+    private readonly blockAssignmentService: BlockAssignmentService,
   ) {}
 
   async create(createEnrollmentBlockDto: CreateEnrollmentBlockDto): Promise<EnrollmentBlock> {
@@ -79,5 +86,100 @@ export class EnrollmentBlockService {
   async remove(enrollmentId: string, blockId: string): Promise<void> {
     await this.findOne(enrollmentId, blockId);
     await this.enrollmentBlockRepository.delete(enrollmentId, blockId);
+  }
+
+  /**
+   * Verifica si un usuario tiene permisos para acceder a la información de estudiantes matriculados en un bloque
+   * @param userId ID del usuario que realiza la solicitud
+   * @param rolName Nombre del rol del usuario
+   * @param blockId ID del bloque al que se intenta acceder
+   */
+  async checkEnrollmentPermissions(userId: string, rolName: string | null, blockId: string): Promise<EnrollmentPermissionResult> {
+    // 1. Validar que el usuario sea profesor
+    const TEACHER_ROLE = 'TEACHER';
+    if (rolName !== TEACHER_ROLE) {
+      return {
+        hasPermission: false,
+        accessType: EnrollmentAccessType.NO_ACCESS,
+        message: 'Solo los profesores pueden acceder a la lista de estudiantes matriculados'
+      };
+    }
+
+    // 2. Buscar el bloque para obtener su courseOfferingId
+    const block = await this.blockService.findById(blockId);
+    if (!block.courseOfferingId) {
+      throw new BadRequestException('El bloque no tiene una oferta de curso asociada');
+    }
+
+    // 3. Buscar todas las asignaciones para este bloque
+    const blockAssignments = await this.blockAssignmentService.findByBlockId(blockId);
+    if (!blockAssignments || blockAssignments.length === 0) {
+      return {
+        hasPermission: false,
+        accessType: EnrollmentAccessType.NO_ACCESS,
+        message: 'No hay profesores asignados a este bloque'
+      };
+    }
+
+    console.log(`Asignaciones encontradas para el bloque ${blockId}:`, blockAssignments);
+    console.log(`ID del usuario actual: ${userId}`);
+
+    // 4. Buscar si el usuario actual está asignado a este bloque
+    const userAssignment = blockAssignments.find(assignment => assignment.userId === userId);
+    
+    if (userAssignment) {
+      return {
+        hasPermission: true,
+        accessType: EnrollmentAccessType.OWNER,
+        message: 'Usuario es colaborador/responsable de este bloque'
+      };
+    }
+
+    // 5. Si el usuario no está asignado directamente, verificar si es responsable
+    // de otro bloque del mismo courseOffering
+    const courseOfferingAssignments = 
+      await this.blockAssignmentService.findByCourseOfferingId(block.courseOfferingId);
+    
+    const isResponsible = courseOfferingAssignments.some(
+      assignment => assignment.userId === userId && assignment.blockRol === BlockRolType.RESPONSIBLE
+    );
+
+    if (isResponsible) {
+      return {
+        hasPermission: true,
+        accessType: EnrollmentAccessType.RESPONSIBLE,
+        message: 'Usuario es responsable de la oferta de curso'
+      };
+    }
+
+    // 6. Si no se cumple ninguna de las condiciones anteriores, no tiene permisos
+    return {
+      hasPermission: false,
+      accessType: EnrollmentAccessType.NO_ACCESS,
+      message: 'Usuario no tiene permisos para acceder a la lista de estudiantes de este bloque'
+    };
+  }
+
+  /**
+   * Encuentra todos los estudiantes matriculados en un bloque específico y su asistencia
+   * @param blockId ID del bloque
+   * @param date Fecha opcional para buscar la asistencia
+   * @param userId ID del usuario que realiza la solicitud
+   * @param rolName Nombre del rol del usuario
+   */
+  async findEnrolledStudents(blockId: string, date?: Date, userId?: string, rolName?: string | null): Promise<EnrolledStudentsResponseDto> {
+    // Verificar que el bloque existe
+    await this.blockService.findById(blockId);
+    
+    // Si se proporciona un userId y rolName, verificar permisos
+    if (userId && rolName !== undefined) {
+      const permissionResult = await this.checkEnrollmentPermissions(userId, rolName, blockId);
+      if (!permissionResult.hasPermission) {
+        throw new ForbiddenException(permissionResult.message);
+      }
+    }
+    
+    // Usar el query object para obtener los estudiantes matriculados
+    return await this.findEnrolledStudentsQuery.execute(blockId, date);
   }
 }
