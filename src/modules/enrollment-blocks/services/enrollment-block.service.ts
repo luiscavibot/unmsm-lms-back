@@ -121,9 +121,6 @@ export class EnrollmentBlockService {
       };
     }
 
-    console.log(`Asignaciones encontradas para el bloque ${blockId}:`, blockAssignments);
-    console.log(`ID del usuario actual: ${userId}`);
-
     // 4. Buscar si el usuario actual está asignado a este bloque
     const userAssignment = blockAssignments.find(assignment => assignment.userId === userId);
     
