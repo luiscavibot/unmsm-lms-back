@@ -8,6 +8,8 @@ import { MATERIAL_REPOSITORY } from './tokens';
 import { WeeksModule } from '../weeks/weeks.module';
 import { BlocksModule } from '../blocks/blocks.module';
 import { UsersModule } from '../users/users.module';
+import { StorageModule } from '../../common/storage/storage.module';
+import { BlockAssignmentsModule } from '../block-assignments/block-assignments.module';
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { UsersModule } from '../users/users.module';
     WeeksModule,
     BlocksModule,
     UsersModule,
+    StorageModule,
+    BlockAssignmentsModule,
   ],
   controllers: [MaterialController],
   providers: [

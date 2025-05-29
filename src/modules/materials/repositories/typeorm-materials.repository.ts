@@ -20,21 +20,21 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
 
   async findAll(): Promise<Material[]> {
     return await this.materialRepository.find({
-      relations: ['week', 'uploadedBy'],
+      relations: ['week'],
     });
   }
 
   async findOne(id: string): Promise<Material | null> {
     return await this.materialRepository.findOne({
       where: { id },
-      relations: ['week', 'uploadedBy'],
+      relations: ['week'],
     });
   }
 
   async findByWeekId(weekId: string): Promise<Material[]> {
     return await this.materialRepository.find({
       where: { weekId },
-      relations: ['week', 'uploadedBy'],
+      relations: ['week'],
     });
   }
 
