@@ -13,6 +13,7 @@ import { UploadMaterialDto } from '../dtos/upload-material.dto';
 import { MaterialAccessType, MaterialPermissionResult } from '../dtos/material-permission.dto';
 import { BlockRolType } from '../../block-assignments/enums/block-rol-type.enum';
 import { BlockAssignmentService } from '../../block-assignments/services/block-assignment.service';
+import { UpdateMaterialFileDto } from '../dtos/update-material-file.dto';
 
 @Injectable()
 export class MaterialService {
@@ -229,5 +230,86 @@ export class MaterialService {
       this.logger.error(`Error al eliminar archivo del material ${id}: ${error.message}`);
       throw new BadRequestException(`Error al eliminar el archivo: ${error.message}`);
     }
+  }
+
+  async updateMaterialFile(
+    id: string,
+    updateMaterialFileDto: UpdateMaterialFileDto,
+    file: Express.Multer.File | undefined,
+    userId: string,
+    rolName: string | null
+  ): Promise<Material> {
+    this.logger.log(`Actualizando material ${id} por el usuario ${userId}`);
+    
+    // Buscar el material existente
+    const existingMaterial = await this.findOne(id);
+    
+    // Verificar permisos
+    const permissionResult = await this.checkMaterialPermissions(userId, rolName, existingMaterial.weekId);
+    if (!permissionResult.hasPermission) {
+      throw new ForbiddenException(permissionResult.message);
+    }
+    
+    // Preparar objeto para actualización
+    const updateData: UpdateMaterialDto = {};
+    
+    // Actualizar título si se proporciona
+    if (updateMaterialFileDto.title) {
+      updateData.title = updateMaterialFileDto.title;
+    }
+    
+    // Actualizar tipo si se proporciona
+    if (updateMaterialFileDto.type) {
+      updateData.type = updateMaterialFileDto.type;
+    }
+    
+    // Si se proporciona un nuevo archivo, subirlo y actualizar la URL
+    if (file) {
+      try {
+        // Sanitizar el nombre del archivo para seguridad
+        const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+        
+        // Construir la ruta para el material
+        const path = `${this.MATERIALS_PATH_PREFIX}/weeks/${existingMaterial.weekId}`;
+        const key = `${path}/${sanitizedFileName}`;
+        
+        // Si ya existe un archivo, eliminarlo primero
+        if (existingMaterial.fileUrl) {
+          try {
+            await this.storageService.deleteFile(existingMaterial.fileUrl);
+          } catch (error) {
+            this.logger.warn(`No se pudo eliminar el archivo anterior: ${error.message}`);
+            // Continuamos con la actualización aunque no se pueda eliminar el archivo anterior
+          }
+        }
+        
+        // Subir el nuevo archivo
+        const fileUrl = await this.storageService.uploadFile(
+          file.buffer, 
+          key, 
+          file.mimetype
+        );
+        
+        // Actualizar la URL del archivo
+        updateData.fileUrl = fileUrl;
+      } catch (error) {
+        this.logger.error(`Error al actualizar el archivo del material ${id}: ${error.message}`);
+        throw new BadRequestException(`Error al actualizar el archivo: ${error.message}`);
+      }
+    }
+    
+    // Si no hay cambios, retornar el material existente
+    if (Object.keys(updateData).length === 0) {
+      throw new BadRequestException('No se proporcionaron datos para actualizar');
+    }
+    
+    // Actualizar el material en la base de datos
+    const updatedMaterial = await this.update(id, updateData);
+    
+    if (!updatedMaterial) {
+      throw new BadRequestException(`No se pudo actualizar el material con ID ${id}`);
+    }
+    
+    return updatedMaterial;
   }
 }

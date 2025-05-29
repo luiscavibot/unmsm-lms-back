@@ -7,6 +7,7 @@ import { UpdateMaterialDto } from '../dtos/update-material.dto';
 import { Material } from '../entities/material.entity';
 import { WeekWithMaterialsDto } from '../dtos/response-material.dto';
 import { UploadMaterialDto } from '../dtos/upload-material.dto';
+import { UpdateMaterialFileDto } from '../dtos/update-material-file.dto';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
 import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
@@ -99,5 +100,27 @@ export class MaterialController {
     @CurrentUserToken() user: UserPayload
   ): Promise<void> {
     return this.materialService.deleteFile(id, user.userId, user.rolName);
+  }
+
+  @Patch('file/:id')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Actualizar un material y/o su archivo' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Datos y/o archivo del material para actualizar',
+    type: UpdateMaterialFileDto,
+  })
+  async updateMaterialFile(
+    @Param('id') id: string,
+    @Body() updateDto,
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<Material> {
+    const updateMaterialFileDto: UpdateMaterialFileDto = {
+      title: updateDto.title,
+      type: updateDto.type
+    };
+    return this.materialService.updateMaterialFile(id, updateMaterialFileDto, file, user.userId, user.rolName);
   }
 }
