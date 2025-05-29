@@ -8,4 +8,5 @@ export interface IAttendanceRepository {
   update(id: string, attendance: Partial<Attendance>): Promise<Attendance | null>;
   delete(id: string): Promise<void>;
   findAttendancesByBlockId(blockId: string): Promise<AttendanceByWeekResponseDto>;
+  findByEnrollmentAndSession(enrollmentId: string, classSessionId: string): Promise<Attendance | null>;
 }

@@ -111,10 +111,6 @@ export class FindEnrolledStudentsQuery {
     // Guardar la fecha de la sesión para incluirla en los metadatos
     if (classSessions.length > 0 && classSessions[0].sessionDate) {
       try {
-        // Imprimir el tipo de dato para depuración
-        console.log('SessionDate type:', typeof classSessions[0].sessionDate);
-        console.log('SessionDate value:', classSessions[0].sessionDate);
-
         // Convertir a objeto Date si no lo es ya
         let dateValue;
         if (typeof classSessions[0].sessionDate === 'string') {

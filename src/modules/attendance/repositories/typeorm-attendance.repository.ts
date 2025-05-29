@@ -38,6 +38,15 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
     await this.attendanceRepository.delete(id);
   }
 
+  async findByEnrollmentAndSession(enrollmentId: string, classSessionId: string): Promise<Attendance | null> {
+    return await this.attendanceRepository.findOne({
+      where: {
+        enrollmentId,
+        classSessionId
+      }
+    });
+  }
+
   async findAttendancesByBlockId(blockId: string): Promise<AttendanceByWeekResponseDto> {
     try {
       // Query para obtener todas las asistencias relacionadas a este bloque

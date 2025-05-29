@@ -8,6 +8,7 @@ import { ATTENDANCE_REPOSITORY } from './tokens';
 import { EnrollmentModule } from '../enrollments/enrollment.module';
 import { ClassSessionModule } from '../class-sessions/class-session.module';
 import { BlocksModule } from '../blocks/blocks.module';
+import { BlockAssignmentsModule } from '../block-assignments/block-assignments.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { BlocksModule } from '../blocks/blocks.module';
     EnrollmentModule,
     ClassSessionModule,
     BlocksModule,
+    BlockAssignmentsModule,
   ],
   controllers: [AttendanceController],
   providers: [
