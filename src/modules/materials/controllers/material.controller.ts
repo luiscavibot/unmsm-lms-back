@@ -1,10 +1,15 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse, ApiConsumes, ApiBody, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MaterialService } from '../services/material.service';
 import { CreateMaterialDto } from '../dtos/create-material.dto';
 import { UpdateMaterialDto } from '../dtos/update-material.dto';
 import { Material } from '../entities/material.entity';
 import { WeekWithMaterialsDto } from '../dtos/response-material.dto';
+import { UploadMaterialDto } from '../dtos/upload-material.dto';
+import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
+import { UserPayload } from '../../../common/auth/interfaces';
+import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
 
 @Controller('materials')
 export class MaterialController {
@@ -56,5 +61,43 @@ export class MaterialController {
   })
   async findByBlockId(@Param('blockId') blockId: string): Promise<WeekWithMaterialsDto[]> {
     return await this.materialService.findMaterialsByBlockId(blockId);
+  }
+
+  @Post('upload')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiOperation({ summary: 'Subir un archivo de material' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Archivo del material para subir',
+    type: UploadMaterialDto,
+  })
+  async uploadMaterial(
+    @Body() uploadDto,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<Material> {
+    const uploadMaterialDto: UploadMaterialDto = {
+      weekId: uploadDto.weekId,
+      title: uploadDto.title,
+      type: uploadDto.type,
+      file: file
+    };
+    return this.materialService.uploadMaterial(uploadMaterialDto, file, user.userId, user.rolName);
+  }
+
+  @Delete('file/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Eliminar el archivo de un material' })
+  @ApiResponse({
+    status: 200,
+    description: 'Archivo del material eliminado correctamente',
+    type: Material
+  })
+  async deleteFile(
+    @Param('id') id: string,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<void> {
+    return this.materialService.deleteFile(id, user.userId, user.rolName);
   }
 }
