@@ -3,8 +3,11 @@ import { BlockAssignmentService } from '../services/block-assignment.service';
 import { BlockAssignment } from '../entities/block-assignment.entity';
 import { CreateBlockAssignmentDto } from '../dtos/create-block-assignment.dto';
 import { UpdateBlockAssignmentDto } from '../dtos/update-block-assignment.dto';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/common/auth/guards/jwt-auth.guard';
+import { CurrentUserToken } from 'src/common/auth/decorators/current-user.decorator';
+import { UserPayload } from 'src/common/auth/interfaces';
+import { TeacherRoleResponseDto } from '../dtos/teacher-role-response.dto';
 
 @Controller('block-assignments')
 export class BlockAssignmentController {
@@ -69,5 +72,28 @@ export class BlockAssignmentController {
     @Param('courseOfferingId') courseOfferingId: string
   ): Promise<void> {
     return await this.blockAssignmentService.remove(userId, blockId, courseOfferingId);
+  }
+
+  @Get('role/:courseOfferingId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ 
+    summary: 'Verificar el rol de un profesor en una oferta de curso',
+    description: 'Verifica si el profesor autenticado es responsable o colaborador de una oferta de curso específica. Solo puede ser accedido por usuarios con rol TEACHER.' 
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Información del rol del profesor en el curso',
+    type: TeacherRoleResponseDto
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'El usuario no tiene rol de profesor'
+  })
+  async checkTeacherRole(
+    @Param('courseOfferingId') courseOfferingId: string,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<TeacherRoleResponseDto> {
+    return await this.blockAssignmentService.checkTeacherRole(user.userId, courseOfferingId, user.rolName);
   }
 }
