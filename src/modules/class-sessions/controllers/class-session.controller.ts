@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClassSessionService } from '../services/class-session.service';
 import { CreateClassSessionDto } from '../dtos/create-class-session.dto';
 import { UpdateClassSessionDto } from '../dtos/update-class-session.dto';
 import { ClassSession } from '../entities/class-session.entity';
+import { ClassDaysResponseDto } from '../dtos/class-days-response.dto';
+import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
+import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
+import { UserPayload } from '../../../common/auth/interfaces';
 
 @Controller('class-sessions')
 export class ClassSessionController {
@@ -49,5 +53,28 @@ export class ClassSessionController {
   @ApiOperation({ summary: 'Eliminar una sesión de clase' })
   async remove(@Param('id') id: string): Promise<void> {
     return await this.classSessionService.remove(id);
+  }
+
+  @Get('block/:blockId/dates')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ 
+    summary: 'Obtener los días de clase para un bloque específico formateados para un datepicker',
+    description: 'Devuelve un array de objetos con información sobre los días en que hay sesiones de clase para un bloque específico, útil para llenar un componente datepicker en el frontend. Requiere autenticación de profesor asignado al bloque o responsable del curso.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Días de clase obtenidos correctamente',
+    type: ClassDaysResponseDto
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'No tiene permisos para acceder a esta información'
+  })
+  async getClassDaysForDatepicker(
+    @Param('blockId') blockId: string,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<ClassDaysResponseDto> {
+    return await this.classSessionService.getClassDaysForDatepicker(blockId, user.userId, user.rolName);
   }
 }
