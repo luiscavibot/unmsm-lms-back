@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BlockAssignment } from './entities/block-assignment.entity';
 import { BlockAssignmentController } from './controllers/block-assignment.controller';
@@ -13,7 +13,7 @@ import { BlocksModule } from '../blocks/blocks.module';
   imports: [
     TypeOrmModule.forFeature([BlockAssignment]),
     UsersModule,
-    BlocksModule,
+    forwardRef(() => BlocksModule),
     CourseOfferingModule
   ],
   controllers: [BlockAssignmentController],
