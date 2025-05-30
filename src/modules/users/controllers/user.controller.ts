@@ -1,13 +1,23 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseInterceptors, UploadedFile, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from '../services/user.service';
-import { ApiCreateUser, ApiGetUser, ApiListUsers } from '../decorators/swagger.decorators';
+import { ApiCreateUser, ApiDeleteResume, ApiGetUser, ApiListUsers, ApiUploadResume } from '../decorators/swagger.decorators';
 import { User } from '../entities/user.entity';
 import { FindUserQueryDto, FindUsersQueryDto } from '../dtos/user-request.dto';
 import { CreateUserDto } from '../dtos/create-user.dto';
+import { ResumeUploadDto } from '../dtos/resume-upload.dto';
+import { FilesService } from '../../files/services/files.service';
+import { CurrentUserToken } from 'src/common/auth/decorators/current-user.decorator';
+import { UserPayload } from 'src/common/auth/interfaces';
+import { BlockAssignmentService } from '../../block-assignments/services/block-assignment.service';
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly filesService: FilesService,
+    private readonly blockAssignmentService: BlockAssignmentService,
+  ) {}
 
   @Get()
   @ApiListUsers()
@@ -28,5 +38,70 @@ export class UserController {
   @ApiCreateUser()
   async create(@Body() dto: CreateUserDto) {
     return await this.userService.create(dto);
+  }
+
+  @Post('resume')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiUploadResume()
+  async uploadResume(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() dto: ResumeUploadDto,
+    @CurrentUserToken() user: UserPayload,
+  ): Promise<User> {
+    if (!file) {
+      throw new BadRequestException('No se ha proporcionado ningún archivo');
+    }
+
+    // Verificar que el archivo es un PDF
+    if (file.mimetype !== 'application/pdf') {
+      throw new BadRequestException('El archivo debe ser un PDF');
+    }
+
+    // Verificar que el usuario tiene asignación en el bloque especificado
+    const blockAssignments = await this.blockAssignmentService.findByBlockId(dto.blockId);
+    const userAssignment = blockAssignments.find(assignment => assignment.userId === user.userId);
+
+    if (!userAssignment) {
+      throw new ForbiddenException('No tienes permisos para subir un currículum para este bloque. Solo los profesores responsables o colaboradores pueden hacerlo.');
+    }
+
+    // Subir el archivo a la carpeta 'resumes'
+    const fileMetadata = await this.filesService.upload(file, user.userId, 'resumes');
+    
+    // Generar URL del archivo y actualizar el atributo en Cognito
+    const fileUrl = this.userService.getFileUrl(fileMetadata);
+    await this.userService.updateUserAttribute(
+      user.userId,
+      'custom:resumeUrl',
+      fileUrl,
+    );
+
+    // Devolver el usuario actualizado
+    return this.userService.findOne(user.userId);
+  }
+
+  @Post('resume/delete')
+  @ApiDeleteResume()
+  async deleteResume(
+    @Body() dto: ResumeUploadDto,
+    @CurrentUserToken() user: UserPayload,
+  ): Promise<User> {
+    // Verificar que el usuario tiene asignación en el bloque especificado
+    const blockAssignments = await this.blockAssignmentService.findByBlockId(dto.blockId);
+    const userAssignment = blockAssignments.find(assignment => assignment.userId === user.userId);
+
+    if (!userAssignment) {
+      throw new ForbiddenException('No tienes permisos para eliminar el currículum de este bloque. Solo los profesores responsables o colaboradores pueden hacerlo.');
+    }
+
+    // Eliminar el valor del atributo en Cognito
+    await this.userService.updateUserAttribute(
+      user.userId,
+      'custom:resumeUrl',
+      '',
+    );
+
+    // Devolver el usuario actualizado
+    return this.userService.findOne(user.userId);
   }
 }

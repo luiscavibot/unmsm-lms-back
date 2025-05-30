@@ -18,5 +18,6 @@ import { TypeormFilesRepository } from './repositories/typeorm-files.repository'
       useClass: TypeormFilesRepository,
     },
   ],
+  exports: [FilesService],
 })
 export class FilesModule {}
