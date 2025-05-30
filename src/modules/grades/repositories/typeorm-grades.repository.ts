@@ -43,6 +43,16 @@ export class TypeormGradesRepository implements IGradeRepository {
     });
   }
 
+  async findByEvaluationAndEnrollment(
+    evaluationId: string,
+    enrollmentId: string,
+  ): Promise<Grade | null> {
+    return this.gradeRepository.findOne({
+      where: { evaluationId, enrollmentId },
+      relations: ['evaluation', 'enrollment'],
+    });
+  }
+
   async update(id: string, grade: Partial<Grade>): Promise<Grade | null> {
     await this.gradeRepository.update(id, grade);
     return this.findOne(id);

@@ -6,6 +6,7 @@ export interface IGradeRepository {
   findOne(id: string): Promise<Grade | null>;
   findByEvaluationId(evaluationId: string): Promise<Grade[]>;
   findByEnrollmentId(enrollmentId: string): Promise<Grade[]>;
+  findByEvaluationAndEnrollment(evaluationId: string, enrollmentId: string): Promise<Grade | null>;
   update(id: string, grade: Partial<Grade>): Promise<Grade | null>;
   delete(id: string): Promise<void>;
 }
