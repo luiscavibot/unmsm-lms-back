@@ -11,6 +11,8 @@ import { EnrolledStudentsResponseDto } from '../dtos/enrolled-students-response.
 import { BlockAssignmentService } from 'src/modules/block-assignments/services/block-assignment.service';
 import { EnrollmentPermissionResult, EnrollmentAccessType } from '../dtos/enrollment-permission.dto';
 import { BlockRolType } from 'src/modules/block-assignments/enums/block-rol-type.enum';
+import { FindEnrolledStudentsGradesQuery } from '../queries/find-enrolled-students-grades.query';
+import { EnrolledStudentsGradesResponseDto } from '../dtos/enrolled-students-grades-response.dto';
 
 @Injectable()
 export class EnrollmentBlockService {
@@ -21,6 +23,7 @@ export class EnrollmentBlockService {
     private readonly blockService: BlockService,
     private readonly findEnrolledStudentsQuery: FindEnrolledStudentsQuery,
     private readonly blockAssignmentService: BlockAssignmentService,
+    private readonly findEnrolledStudentsGradesQuery: FindEnrolledStudentsGradesQuery,
   ) {}
 
   async create(createEnrollmentBlockDto: CreateEnrollmentBlockDto): Promise<EnrollmentBlock> {
@@ -178,5 +181,27 @@ export class EnrollmentBlockService {
     
     // Usar el query object para obtener los estudiantes matriculados
     return await this.findEnrolledStudentsQuery.execute(blockId, date);
+  }
+
+  /**
+   * Encuentra todos los estudiantes matriculados en un bloque específico y sus notas
+   * @param blockId ID del bloque
+   * @param userId ID del usuario que realiza la solicitud
+   * @param rolName Nombre del rol del usuario
+   */
+  async findEnrolledStudentsGrades(blockId: string, userId?: string, rolName?: string | null): Promise<EnrolledStudentsGradesResponseDto> {
+    // Verificar que el bloque existe
+    await this.blockService.findById(blockId);
+    
+    // Si se proporciona un userId y rolName, verificar permisos
+    if (userId && rolName !== undefined) {
+      const permissionResult = await this.checkEnrollmentPermissions(userId, rolName, blockId);
+      if (!permissionResult.hasPermission) {
+        throw new ForbiddenException(permissionResult.message);
+      }
+    }
+    
+    // Usar el query object para obtener los estudiantes matriculados con sus notas
+    return await this.findEnrolledStudentsGradesQuery.execute(blockId);
   }
 }

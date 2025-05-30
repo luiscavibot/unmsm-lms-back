@@ -5,6 +5,7 @@ import { CreateEnrollmentBlockDto } from '../dtos/create-enrollment-block.dto';
 import { UpdateEnrollmentBlockDto } from '../dtos/update-enrollment-block.dto';
 import { EnrollmentBlock } from '../entities/enrollment-block.entity';
 import { EnrolledStudentsResponseDto } from '../dtos/enrolled-students-response.dto';
+import { EnrolledStudentsGradesResponseDto } from '../dtos/enrolled-students-grades-response.dto';
 import { FindEnrolledStudentsQueryDto } from '../dtos/find-enrolled-students-query.dto';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
@@ -56,6 +57,33 @@ export class EnrollmentBlockController {
     return await this.enrollmentBlockService.findEnrolledStudents(
       blockId, 
       query.date, 
+      user.userId, 
+      user.rolName
+    );
+  }
+
+  @Get('students/grades/:blockId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ 
+    summary: 'Obtener todos los estudiantes matriculados en un bloque con sus notas',
+    description: 'Devuelve una lista de estudiantes matriculados en un bloque específico con sus notas en las diferentes evaluaciones. Requiere autenticación de profesor asignado al bloque o responsable del curso.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de estudiantes matriculados con sus notas',
+    type: EnrolledStudentsGradesResponseDto
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'No tiene permisos para acceder a esta información'
+  })
+  async findEnrolledStudentsGrades(
+    @Param('blockId') blockId: string,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<EnrolledStudentsGradesResponseDto> {
+    return await this.enrollmentBlockService.findEnrolledStudentsGrades(
+      blockId, 
       user.userId, 
       user.rolName
     );
