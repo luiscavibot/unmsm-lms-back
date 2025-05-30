@@ -139,9 +139,12 @@ export class GetCourseDetailQuery {
         }
       });
       
-      // Si no es responsable, solo mostramos los bloques donde está como colaborador
+      // Si no es responsable, mostramos los bloques donde está como colaborador y el bloque de teoría
       if (!isResponsible) {
-        query.andWhere('blockAssignment.userId = :userId', { userId });
+        query.andWhere('(blockAssignment.userId = :userId OR block.type = :theoryType)', {
+          userId,
+          theoryType: BlockType.THEORY
+        });
       }
     }
     
