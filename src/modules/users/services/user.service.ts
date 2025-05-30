@@ -9,12 +9,14 @@ import {
   UserType,
   AdminCreateUserCommand,
   AdminAddUserToGroupCommand,
+  AdminUpdateUserAttributesCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../entities/user.entity';
 import { mapUserFromCognito } from '../helpers/user.mappers';
 import { CreateUserDto } from '../dtos/create-user.dto';
 import * as generator from 'generate-password';
+import { FileMetadata } from '../../files/entities/file-metadata.entity';
 
 @Injectable()
 export class UserService {
@@ -159,5 +161,33 @@ export class UserService {
       name,
       password: tempPassword,
     };
+  }
+
+  async updateUserAttribute(userId: string, attributeName: string, attributeValue: string): Promise<boolean> {
+    const userPoolId = this.config.get<string>('COGNITO_USER_POOL_ID');
+
+    try {
+      await this.cognito.send(
+        new AdminUpdateUserAttributesCommand({
+          UserPoolId: userPoolId,
+          Username: userId,
+          UserAttributes: [
+            {
+              Name: attributeName,
+              Value: attributeValue,
+            },
+          ],
+        }),
+      );
+      return true;
+    } catch (err) {
+      console.error(`Error actualizando atributo ${attributeName} para el usuario ${userId}:`, err);
+      throw new InternalServerErrorException(`No se pudo actualizar el atributo ${attributeName}`, err);
+    }
+  }
+
+  getFileUrl(fileMetadata: FileMetadata): string {
+    const cdnUrl = this.config.get<string>('S3_CDN_URL') || '';
+    return `${cdnUrl}/${fileMetadata.hashedName}`;
   }
 }

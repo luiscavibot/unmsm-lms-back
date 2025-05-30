@@ -1,7 +1,9 @@
 import { applyDecorators } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiExtraModels } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiQuery, ApiParam, ApiExtraModels, ApiBody, ApiConsumes } from '@nestjs/swagger';
 import { UserResponseDto } from '../../users/dtos/user-response.dto';
 import { FindUserQueryDto } from '../dtos/user-request.dto';
+import { User } from '../entities/user.entity';
+import { ResumeUploadDto } from '../dtos/resume-upload.dto';
 
 export function ApiListUsers() {
   return applyDecorators(
@@ -48,3 +50,52 @@ export function ApiCreateUser() {
     }),
   );
 }
+
+export const ApiUploadResume = () =>
+  applyDecorators(
+    ApiOperation({ summary: 'Subir currículum del usuario para un bloque específico' }),
+    ApiConsumes('multipart/form-data'),
+    ApiBody({
+      schema: {
+        type: 'object',
+        properties: {
+          file: {
+            type: 'string',
+            format: 'binary',
+            description: 'Archivo PDF del currículum',
+          },
+          blockId: {
+            type: 'string',
+            description: 'ID del bloque al que está asociado el profesor',
+          },
+        },
+        required: ['file', 'blockId'],
+      },
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Currículum subido y perfil actualizado correctamente',
+      type: User,
+    }),
+    ApiResponse({
+      status: 403,
+      description: 'Prohibido: El usuario no tiene asignación en el bloque especificado',
+    }),
+  );
+
+export const ApiDeleteResume = () =>
+  applyDecorators(
+    ApiOperation({ summary: 'Eliminar currículum del usuario para un bloque específico' }),
+    ApiBody({
+      type: ResumeUploadDto,
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'Currículum eliminado correctamente',
+      type: User,
+    }),
+    ApiResponse({
+      status: 403,
+      description: 'Prohibido: El usuario no tiene asignación en el bloque especificado',
+    }),
+  );

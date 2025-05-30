@@ -12,7 +12,7 @@ import { BlocksModule } from '../blocks/blocks.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([BlockAssignment]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     forwardRef(() => BlocksModule),
     CourseOfferingModule
   ],
