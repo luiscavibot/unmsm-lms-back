@@ -10,12 +10,14 @@ import { EnrollmentModule } from '../enrollments/enrollment.module';
 import { Grade } from '../grades/entities/grade.entity';
 import { Enrollment } from '../enrollments/entities/enrollment.entity';
 import { EnrollmentBlock } from '../enrollment-blocks/entities/enrollment-block.entity';
+import { BlockAssignmentsModule } from '../block-assignments/block-assignments.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Evaluation, Grade, Enrollment, EnrollmentBlock]),
     BlocksModule,
-    EnrollmentModule
+    EnrollmentModule,
+    BlockAssignmentsModule
   ],
   controllers: [EvaluationController],
   providers: [
