@@ -10,6 +10,7 @@ import { FilesService } from '../../files/services/files.service';
 import { CurrentUserToken } from 'src/common/auth/decorators/current-user.decorator';
 import { UserPayload } from 'src/common/auth/interfaces';
 import { BlockAssignmentService } from '../../block-assignments/services/block-assignment.service';
+import { isValidResumeMimeType, RESUME_ALLOWED_MIME_TYPES } from '../../../utils/file-validation.utils';
 
 @Controller('users')
 export class UserController {
@@ -41,7 +42,15 @@ export class UserController {
   }
 
   @Post('resume')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', {
+    fileFilter: (req, file, callback) => {
+      if (isValidResumeMimeType(file.mimetype)) {
+        callback(null, true);
+      } else {
+        callback(new BadRequestException(`El archivo debe ser un ${RESUME_ALLOWED_MIME_TYPES.join(', ')}`), false);
+      }
+    },
+  }))
   @ApiUploadResume()
   async uploadResume(
     @UploadedFile() file: Express.Multer.File,
@@ -52,9 +61,9 @@ export class UserController {
       throw new BadRequestException('No se ha proporcionado ningún archivo');
     }
 
-    // Verificar que el archivo es un PDF
-    if (file.mimetype !== 'application/pdf') {
-      throw new BadRequestException('El archivo debe ser un PDF');
+    // Verificar que el archivo es un PDF o una imagen
+    if (!isValidResumeMimeType(file.mimetype)) {
+      throw new BadRequestException(`El archivo debe ser un PDF o una imagen (JPEG, PNG, GIF, WEBP, BMP, TIFF)`);
     }
 
     // Verificar que el usuario tiene asignación en el bloque especificado

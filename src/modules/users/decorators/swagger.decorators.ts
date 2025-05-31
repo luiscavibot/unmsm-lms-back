@@ -62,7 +62,7 @@ export const ApiUploadResume = () =>
           file: {
             type: 'string',
             format: 'binary',
-            description: 'Archivo PDF del currículum',
+            description: 'Archivo PDF o imagen (JPEG, PNG, GIF, WEBP, BMP, TIFF, SVG) del currículum',
           },
           blockId: {
             type: 'string',
