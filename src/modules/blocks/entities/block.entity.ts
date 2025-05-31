@@ -28,4 +28,7 @@ export class Block {
 
   @Column({ type: 'text', nullable: true })
   syllabusUrl: string;
+
+  @Column({ type: 'text', nullable: true })
+  syllabusUpdateDate?: string;
 }

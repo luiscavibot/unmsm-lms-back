@@ -129,6 +129,7 @@ export class GetCourseDetailQuery {
       .addSelect('block.group', 'group')
       .addSelect('block.classroomNumber', 'aula')
       .addSelect('block.syllabusUrl', 'syllabusUrl')
+      .addSelect('block.syllabusUpdateDate', 'syllabusUpdateDate')
       .innerJoin('blockAssignment.block', 'block')
       .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId });
     
@@ -302,6 +303,7 @@ export class GetCourseDetailQuery {
       syllabus: {
         fileName: syllabusFileName,
         downloadUrl: syllabusUrl,
+        updateDate: block.syllabusUpdateDate || ''
       },
       cv: {
         fileName: cvFileName,

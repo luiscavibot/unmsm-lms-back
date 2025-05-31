@@ -149,8 +149,14 @@ export class BlockService {
       file.mimetype
     );
     
-    // Actualizar la URL del syllabus en el bloque
-    const updatedBlock = await this.blockRepository.update(id, { syllabusUrl: hashedKey });
+    // Obtener la fecha actual en formato ISO
+    const currentDate = new Date().toISOString();
+    
+    // Actualizar la URL del syllabus en el bloque y la fecha de actualización
+    const updatedBlock = await this.blockRepository.update(id, { 
+      syllabusUrl: hashedKey,
+      syllabusUpdateDate: currentDate
+    });
     if (!updatedBlock) {
       throw new NotFoundException(`Block with ID ${id} not found`);
     }
@@ -180,8 +186,11 @@ export class BlockService {
       console.log('Error eliminando syllabus, posiblemente no existe', error);
     }
     
-    // Actualizar el registro en la base de datos para eliminar la referencia
-    const updatedBlock = await this.blockRepository.update(id, { syllabusUrl: '' });
+    // Actualizar el registro en la base de datos para eliminar la referencia y la fecha
+    const updatedBlock = await this.blockRepository.update(id, { 
+      syllabusUrl: '',
+      syllabusUpdateDate: ''
+    });
     if (!updatedBlock) {
       throw new NotFoundException(`Block with ID ${id} not found`);
     }
