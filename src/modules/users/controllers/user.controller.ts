@@ -85,6 +85,14 @@ export class UserController {
       fileUrl,
     );
 
+    // Actualizar la fecha de actualización del currículum
+    const currentDate = new Date().toISOString();
+    await this.userService.updateUserAttribute(
+      user.userId,
+      'custom:resumeDate',
+      currentDate,
+    );
+
     // Devolver el usuario actualizado
     return this.userService.findOne(user.userId);
   }
@@ -107,6 +115,13 @@ export class UserController {
     await this.userService.updateUserAttribute(
       user.userId,
       'custom:resumeUrl',
+      '',
+    );
+    
+    // Eliminar también la fecha de actualización
+    await this.userService.updateUserAttribute(
+      user.userId,
+      'custom:resumeDate',
       '',
     );
 

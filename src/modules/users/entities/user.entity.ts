@@ -27,6 +27,9 @@ export class User {
   @Column({ nullable: true, type: 'text' })
   resumeUrl?: string;
 
+  @Column({ nullable: true })
+  resumeUpdateDate?: string;
+
   @Column({ default: true })
   enabled: boolean;
 
