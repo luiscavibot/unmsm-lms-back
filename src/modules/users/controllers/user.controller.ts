@@ -74,8 +74,8 @@ export class UserController {
       throw new ForbiddenException('No tienes permisos para subir un currículum para este bloque. Solo los profesores responsables o colaboradores pueden hacerlo.');
     }
 
-    // Subir el archivo a la carpeta 'resumes'
-    const fileMetadata = await this.filesService.upload(file, user.userId, 'resumes');
+    // Subir el archivo a la carpeta 'resumes/{userId}'
+    const fileMetadata = await this.filesService.upload(file, user.userId, `resumes/${user.userId}`);
     
     // Generar URL del archivo y actualizar el atributo en Cognito
     const fileUrl = this.userService.getFileUrl(fileMetadata);
