@@ -9,6 +9,7 @@ import { UploadSyllabusDto } from '../dtos/upload-syllabus.dto';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
 import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
+import { isValidSyllabusMimeType, SYLLABUS_ALLOWED_MIME_TYPES, getSyllabusValidMimeTypesDescription } from '../../../utils/file-validation.utils';
 
 @Controller('blocks')
 export class BlockController {
@@ -54,11 +55,25 @@ export class BlockController {
 
   @Post(':id/syllabus')
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      fileFilter: (_, file, callback) => {
+        if (!isValidSyllabusMimeType(file.mimetype)) {
+          return callback(
+            new Error(
+              `Tipo de archivo no válido. Solo se permiten: ${SYLLABUS_ALLOWED_MIME_TYPES.join(', ')}`
+            ),
+            false
+          );
+        }
+        callback(null, true);
+      },
+    })
+  )
   @ApiOperation({ summary: 'Subir el syllabus de un bloque' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Archivo PDF del syllabus para el bloque',
+    description: `Archivo del syllabus para el bloque (${getSyllabusValidMimeTypesDescription()})`,
     type: UploadSyllabusDto,
   })
   async uploadSyllabus(
