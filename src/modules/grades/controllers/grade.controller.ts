@@ -4,8 +4,8 @@ import { GradeService } from '../services/grade.service';
 import { Grade } from '../entities/grade.entity';
 import { CreateGradeDto } from '../dtos/create-grade.dto';
 import { UpdateGradeDto } from '../dtos/update-grade.dto';
-import { BulkGradeDto } from '../dtos/bulk-grade.dto';
-import { BulkGradeResponseDto } from '../dtos/bulk-grade-response.dto';
+import { BlockGradeDto } from '../dtos/block-grade.dto';
+import { BlockGradeResponseDto } from '../dtos/block-grade-response.dto';
 import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
@@ -54,28 +54,34 @@ export class GradeController {
     return await this.gradeService.remove(id);
   }
 
-  @Post('bulk')
+  @Post('block/:blockId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ 
-    summary: 'Registrar calificaciones en masa', 
-    description: 'Registra las calificaciones de múltiples estudiantes para una evaluación específica. Requiere autenticación y rol de profesor.'
+  @ApiOperation({
+    summary: 'Registrar calificaciones por bloque',
+    description: 'Registra calificaciones de múltiples estudiantes para múltiples evaluaciones en un bloque académico. Calcula y actualiza automáticamente promedios de bloque y curso. Requiere autenticación y rol de profesor.'
   })
   @ApiResponse({
     status: 200,
     description: 'Calificaciones registradas exitosamente',
-    type: BulkGradeResponseDto
+    type: BlockGradeResponseDto
   })
   @ApiResponse({
     status: 403,
     description: 'No tiene permisos para registrar calificaciones'
   })
-  async registerBulkGrades(
-    @Body() bulkGradeDto: BulkGradeDto,
+  async registerBlockGrades(
+    @Param('blockId') blockId: string,
+    @Body() blockGradeDto: BlockGradeDto,
     @CurrentUserToken() user: UserPayload
-  ): Promise<BulkGradeResponseDto> {
-    return await this.gradeService.registerBulkGrades(
-      bulkGradeDto,
+  ): Promise<BlockGradeResponseDto> {
+    // Asegurar que el blockId de la URL y el del DTO coincidan
+    if (blockId !== blockGradeDto.blockId) {
+      blockGradeDto.blockId = blockId; // Priorizar el blockId de la URL
+    }
+    
+    return await this.gradeService.registerBlockGrades(
+      blockGradeDto,
       user.userId,
       user.rolName
     );

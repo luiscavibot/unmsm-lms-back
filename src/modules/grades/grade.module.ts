@@ -7,12 +7,16 @@ import { TypeormGradesRepository } from './repositories/typeorm-grades.repositor
 import { GRADE_REPOSITORY } from './tokens';
 import { EnrollmentModule } from '../enrollments/enrollment.module';
 import { EvaluationsModule } from '../evaluations/evaluations.module';
+import { BlocksModule } from '../blocks/blocks.module';
+import { EnrollmentBlockModule } from '../enrollment-blocks/enrollment-block.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Grade]),
     EnrollmentModule,
-    EvaluationsModule
+    EvaluationsModule,
+    BlocksModule,
+    EnrollmentBlockModule
   ],
   controllers: [GradeController],
   providers: [

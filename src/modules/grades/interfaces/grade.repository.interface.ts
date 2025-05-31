@@ -9,4 +9,10 @@ export interface IGradeRepository {
   findByEvaluationAndEnrollment(evaluationId: string, enrollmentId: string): Promise<Grade | null>;
   update(id: string, grade: Partial<Grade>): Promise<Grade | null>;
   delete(id: string): Promise<void>;
+  
+  // Nuevos métodos para el manejo de matriz de calificaciones
+  findByBlockIdAndEvaluationIds(blockId: string, evaluationIds: string[]): Promise<Grade[]>;
+  findByBlockIdAndEnrollmentId(blockId: string, enrollmentId: string): Promise<Grade[]>;
+  calculateBlockAverage(blockId: string, enrollmentId: string): Promise<number>;
+  calculateCourseAverage(courseOfferingId: string, enrollmentId: string): Promise<number>;
 }

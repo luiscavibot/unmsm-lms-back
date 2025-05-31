@@ -3,11 +3,13 @@ import { Grade } from '../entities/grade.entity';
 import { IGradeRepository } from '../interfaces/grade.repository.interface';
 import { CreateGradeDto } from '../dtos/create-grade.dto';
 import { UpdateGradeDto } from '../dtos/update-grade.dto';
-import { BulkGradeDto } from '../dtos/bulk-grade.dto';
-import { BulkGradeResponseDto } from '../dtos/bulk-grade-response.dto';
+import { BlockGradeDto } from '../dtos/block-grade.dto';
+import { BlockGradeResponseDto, StudentAverageDto } from '../dtos/block-grade-response.dto';
 import { GRADE_REPOSITORY } from '../tokens';
 import { EnrollmentService } from '../../enrollments/services/enrollment.service';
 import { EvaluationService } from '../../evaluations/services/evaluation.service';
+import { BlockService } from '../../blocks/services/block.service';
+import { EnrollmentBlockService } from '../../enrollment-blocks/services/enrollment-block.service';
 
 @Injectable()
 export class GradeService {
@@ -16,6 +18,8 @@ export class GradeService {
     private readonly gradeRepository: IGradeRepository,
     private readonly enrollmentService: EnrollmentService,
     private readonly evaluationService: EvaluationService,
+    private readonly blockService: BlockService,
+    private readonly enrollmentBlockService: EnrollmentBlockService,
   ) {}
 
   async create(createGradeDto: CreateGradeDto): Promise<Grade> {
@@ -75,79 +79,128 @@ export class GradeService {
   }
 
   /**
-   * Registra las calificaciones de múltiples estudiantes para una evaluación específica
-   * @param bulkGradeDto DTO con la información de calificaciones
+   * Registra calificaciones por bloque académico y calcula promedios
+   * @param blockGradeDto DTO con las calificaciones organizadas por estudiante y evaluación
    * @param userId ID del usuario que registra las calificaciones
    * @param rolName Rol del usuario que registra las calificaciones
    */
-  async registerBulkGrades(bulkGradeDto: BulkGradeDto, userId: string, rolName: string | null): Promise<BulkGradeResponseDto> {
-    // 1. Validar la evaluación
-    const evaluation = await this.evaluationService.findById(bulkGradeDto.evaluationId);
-    
-    if (!evaluation) {
-      throw new NotFoundException(`Evaluación con ID ${bulkGradeDto.evaluationId} no encontrada`);
+  async registerBlockGrades(blockGradeDto: BlockGradeDto, userId: string, rolName: string | null): Promise<BlockGradeResponseDto> {
+    // 1. Validar el bloque
+    const block = await this.blockService.findById(blockGradeDto.blockId);
+    if (!block) {
+      throw new NotFoundException(`Bloque con ID ${blockGradeDto.blockId} no encontrado`);
     }
-    
+
     // 2. Validar permisos del usuario (solo profesores asignados al bloque pueden registrar notas)
     if (rolName !== 'TEACHER') {
       throw new ForbiddenException('Solo los profesores pueden registrar calificaciones');
     }
+
+    // 3. Recopilar todos los IDs de evaluación para validarlos en conjunto
+    const allEvaluationIds = new Set<string>();
+    blockGradeDto.studentGrades.forEach(student => {
+      student.gradeRecords.forEach(record => {
+        allEvaluationIds.add(record.evaluationId);
+      });
+    });
+    const evaluationIds = Array.from(allEvaluationIds);
     
-    // 3. Procesar cada registro de calificación
-    const gradeResults: Grade[] = [];
-    
-    for (const record of bulkGradeDto.gradeRecords) {
-      // Validar que el estudiante está matriculado
-      await this.enrollmentService.findOne(record.enrollmentId);
+    // 4. Validar que todas las evaluaciones existen y pertenecen al bloque
+    for (const evaluationId of evaluationIds) {
+      const evaluation = await this.evaluationService.findById(evaluationId);
+      if (!evaluation) {
+        throw new NotFoundException(`Evaluación con ID ${evaluationId} no encontrada`);
+      }
       
-      // Buscar si ya existe un registro de calificación para este estudiante en esta evaluación
-      const existingGrade = await this.gradeRepository.findByEvaluationAndEnrollment(
-        bulkGradeDto.evaluationId,
-        record.enrollmentId
+      if (evaluation.blockId !== blockGradeDto.blockId) {
+        throw new ForbiddenException(`La evaluación ${evaluationId} no pertenece al bloque especificado`);
+      }
+    }
+    
+    // 5. Procesar cada estudiante y sus calificaciones
+    const gradeResults: Grade[] = [];
+    const studentAverages: StudentAverageDto[] = [];
+    
+    for (const student of blockGradeDto.studentGrades) {
+      // Validar que el estudiante está matriculado
+      await this.enrollmentService.findOne(student.enrollmentId);
+      
+      // Procesar cada evaluación del estudiante
+      for (const gradeRecord of student.gradeRecords) {
+        // Buscar si ya existe una calificación para esta evaluación y estudiante
+        const existingGrade = await this.gradeRepository.findByEvaluationAndEnrollment(
+          gradeRecord.evaluationId,
+          student.enrollmentId
+        );
+        
+        let grade: Grade;
+        
+        if (existingGrade) {
+          // Actualizar registro existente
+          grade = await this.gradeRepository.update(
+            existingGrade.id,
+            { score: gradeRecord.score }
+          ) as Grade;
+        } else {
+          // Crear nuevo registro
+          grade = await this.gradeRepository.create({
+            evaluationId: gradeRecord.evaluationId,
+            enrollmentId: student.enrollmentId,
+            score: gradeRecord.score
+          });
+        }
+        
+        gradeResults.push(grade);
+      }
+      
+      // Calcular el promedio del bloque para este estudiante
+      const blockAverage = await this.gradeRepository.calculateBlockAverage(
+        blockGradeDto.blockId,
+        student.enrollmentId
       );
       
-      let grade: Grade;
+      // Actualizar el promedio en la tabla enrollment_blocks
+      await this.enrollmentBlockService.update(
+        student.enrollmentId,
+        blockGradeDto.blockId,
+        { blockAverage }
+      );
       
-      if (existingGrade) {
-        // Actualizar registro existente
-        grade = await this.gradeRepository.update(
-          existingGrade.id,
-          { score: record.score }
-        ) as Grade;
-      } else {
-        // Crear nuevo registro
-        grade = await this.gradeRepository.create({
-          evaluationId: bulkGradeDto.evaluationId,
-          enrollmentId: record.enrollmentId,
-          score: record.score
-        });
-      }
+      // Obtener el courseOfferingId para calcular el promedio del curso
+      const courseOfferingId = block.courseOfferingId;
       
-      gradeResults.push(grade);
+      // Calcular el promedio del curso para este estudiante
+      const courseAverage = await this.gradeRepository.calculateCourseAverage(
+        courseOfferingId,
+        student.enrollmentId
+      );
+      
+      // Actualizar el promedio final en la tabla enrollment
+      await this.enrollmentService.update(
+        student.enrollmentId,
+        { finalAverage: courseAverage }
+      );
+      
+      // Guardar los promedios calculados para incluirlos en la respuesta
+      studentAverages.push({
+        enrollmentId: student.enrollmentId,
+        blockAverage,
+        courseAverage
+      });
     }
     
-    // 4. Preparar información de la evaluación para la respuesta
-    let evaluationInfo = `Evaluación: ${evaluation.title}`;
-    
-    if (evaluation.evaluationDate) {
-      try {
-        const evaluationDate = new Date(evaluation.evaluationDate);
-        evaluationInfo = `${evaluation.title} - ${evaluationDate.toLocaleDateString('es-ES', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        })}`;
-      } catch (e) {
-        // Si hay un error al formatear la fecha, usar un formato simple
-        evaluationInfo = `${evaluation.title} - ${evaluation.evaluationDate.toISOString().split('T')[0]}`;
-      }
+    // 6. Preparar información del bloque para la respuesta
+    let blockInfo = `Bloque: ${block.type}`;
+    if (block.group) {
+      blockInfo += ` - Grupo ${block.group}`;
     }
     
-    // Construir la respuesta
+    // 7. Construir la respuesta con la información de las calificaciones y promedios
     return {
       grades: gradeResults,
       totalProcessed: gradeResults.length,
-      evaluationInfo
+      blockInfo,
+      studentAverages
     };
   }
 }
