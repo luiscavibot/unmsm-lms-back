@@ -13,6 +13,13 @@ export class FileInfoDto {
     example: 'https://storage.example.com/files/asdf-asdf-asdf.pdf',
   })
   downloadUrl: string;
+
+  @ApiProperty({
+    description: 'Fecha de última actualización del archivo (solo para CV)',
+    example: '2025-05-15T12:30:45.000Z',
+    required: false,
+  })
+  updateDate?: string;
 }
 
 export class BlockScheduleDto {

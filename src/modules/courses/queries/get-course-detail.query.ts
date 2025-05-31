@@ -96,6 +96,7 @@ export class GetCourseDetailQuery {
 
     let teacherName = 'Sin profesor asignado';
     let teacherResumeUrl = '';
+    let teacherResumeUpdateDate = '';
     let responsibleTeacher: User | null = null;
     
     if (teacherAssignment) {
@@ -103,12 +104,13 @@ export class GetCourseDetailQuery {
         responsibleTeacher = await this.userService.findOne(teacherAssignment.userId);
         teacherName = responsibleTeacher.name;
         teacherResumeUrl = responsibleTeacher.resumeUrl || '';
+        teacherResumeUpdateDate = responsibleTeacher.resumeUpdateDate || '';
       } catch (error) {
         console.error('Error al obtener información del profesor:', error);
       }
     }
 
-    return { teacherName, teacherResumeUrl, responsibleTeacher };
+    return { teacherName, teacherResumeUrl, teacherResumeUpdateDate, responsibleTeacher };
   }
 
   /**
@@ -167,20 +169,23 @@ export class GetCourseDetailQuery {
 
     let blockTeacherName: string | null = null;
     let teacherCvUrl: string = '';
+    let teacherCvUpdateDate: string = '';
 
     if (blockTeacherAssignment) {
       try {
         const blockTeacherUser = await this.userService.findOne(blockTeacherAssignment.userId);
         blockTeacherName = blockTeacherUser.name;
         teacherCvUrl = blockTeacherUser.resumeUrl || '';
+        teacherCvUpdateDate = blockTeacherUser.resumeUpdateDate || '';
       } catch (error) {
         console.error('Error al obtener información del profesor del bloque:', error);
       }
     } else if (responsibleTeacher) {
       teacherCvUrl = responsibleTeacher.resumeUrl || '';
+      teacherCvUpdateDate = responsibleTeacher.resumeUpdateDate || '';
     }
 
-    return { blockTeacherName, teacherCvUrl };
+    return { blockTeacherName, teacherCvUrl, teacherCvUpdateDate };
   }
 
   /**
@@ -255,7 +260,7 @@ export class GetCourseDetailQuery {
    */
   private async buildBlockDetails(block: any, courseOfferingId: string, responsibleTeacher: User | null) {
     // Obtener información del profesor del bloque
-    const { blockTeacherName, teacherCvUrl } = await this.getBlockTeacherInfo(
+    const { blockTeacherName, teacherCvUrl, teacherCvUpdateDate } = await this.getBlockTeacherInfo(
       block.blockId, 
       courseOfferingId, 
       responsibleTeacher
@@ -281,13 +286,10 @@ export class GetCourseDetailQuery {
     
     // Construir la URL completa del silabo
     let syllabusUrl = block.syllabusUrl || '';
-    console.log('Syllabus URL:', block.syllabusUrl);
     if (syllabusUrl) {
       const cdnUrl = this.config.get<string>('S3_CDN_URL') || this.config.get<string>('STORAGE_DOMAIN') || '';
       syllabusUrl = `${cdnUrl}/${syllabusUrl}`;
     }
-
-    console.log('Syllabus URL completa:', syllabusUrl);
 
     // Crear el objeto de detalle del bloque
     return {
@@ -304,6 +306,7 @@ export class GetCourseDetailQuery {
       cv: {
         fileName: cvFileName,
         downloadUrl: teacherCvUrl,
+        updateDate: teacherCvUpdateDate
       },
       meetUrl: meetUrl,
     };
