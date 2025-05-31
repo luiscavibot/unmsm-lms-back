@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Material } from '../entities/material.entity';
@@ -12,6 +13,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
     @InjectRepository(Material)
     private readonly materialRepository: Repository<Material>,
     private readonly userService: UserService,
+    private readonly config: ConfigService,
   ) {}
 
   async create(material: Material): Promise<Material> {
@@ -88,6 +90,13 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
 
         const userName = await this.userService.findOne(item.uploadedById);
 
+        // Construir la URL del material según el tipo
+        let materialUrl = item.materialUrl;
+        if (item.materialType !== MaterialType.EXTERNAL_LINK && materialUrl) {
+          const cdnUrl = this.config.get<string>('S3_CDN_URL') || this.config.get<string>('STORAGE_DOMAIN');
+          materialUrl = `${cdnUrl}${materialUrl}`;
+        }
+
         week.materials.push({
           materialId: item.materialId,
           name: item.name,
@@ -95,7 +104,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
           uploadDate: uploadDate,
           uploadedById: item.uploadedById,
           uploadedByName: userName.name,
-          materialUrl: item.materialUrl,
+          materialUrl: materialUrl,
           materialName: materialName,
         });
       }

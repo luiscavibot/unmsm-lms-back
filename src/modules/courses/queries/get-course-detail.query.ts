@@ -1,5 +1,6 @@
 import { Repository } from 'typeorm';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Enrollment } from '../../enrollments/entities/enrollment.entity';
 import { BlockAssignment } from '../../block-assignments/entities/block-assignment.entity';
@@ -26,6 +27,7 @@ export class GetCourseDetailQuery {
     @InjectRepository(CourseOffering)
     private readonly courseOfferingRepository: Repository<CourseOffering>,
     private readonly userService: UserService,
+    private readonly config: ConfigService,
   ) {}
 
   /**
@@ -276,6 +278,16 @@ export class GetCourseDetailQuery {
     // Extraer nombres de archivo de las URLs
     const syllabusFileName = CourseUtils.extractFileNameFromUrl(block.syllabusUrl);
     const cvFileName = CourseUtils.extractFileNameFromUrl(teacherCvUrl);
+    
+    // Construir la URL completa del silabo
+    let syllabusUrl = block.syllabusUrl || '';
+    console.log('Syllabus URL:', block.syllabusUrl);
+    if (syllabusUrl) {
+      const cdnUrl = this.config.get<string>('S3_CDN_URL') || this.config.get<string>('STORAGE_DOMAIN') || '';
+      syllabusUrl = `${cdnUrl}/${syllabusUrl}`;
+    }
+
+    console.log('Syllabus URL completa:', syllabusUrl);
 
     // Crear el objeto de detalle del bloque
     return {
@@ -287,7 +299,7 @@ export class GetCourseDetailQuery {
       teacher: blockTeacherName,
       syllabus: {
         fileName: syllabusFileName,
-        downloadUrl: block.syllabusUrl || '',
+        downloadUrl: syllabusUrl,
       },
       cv: {
         fileName: cvFileName,

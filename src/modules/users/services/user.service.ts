@@ -187,7 +187,7 @@ export class UserService {
   }
 
   getFileUrl(fileMetadata: FileMetadata): string {
-    const cdnUrl = this.config.get<string>('S3_CDN_URL') || '';
+    const cdnUrl = this.config.get<string>('S3_CDN_URL') || this.config.get<string>('STORAGE_DOMAIN') || '';
     return `${cdnUrl}/${fileMetadata.hashedName}`;
   }
 }

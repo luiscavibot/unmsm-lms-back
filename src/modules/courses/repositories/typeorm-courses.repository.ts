@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course } from '../entities/course.entity';
@@ -27,7 +28,8 @@ export class TypeormCoursesRepository implements ICourseRepository {
     private readonly blockAssignmentRepository: Repository<BlockAssignment>,
     @InjectRepository(CourseOffering)
     private readonly courseOfferingRepository: Repository<CourseOffering>,
-    private readonly userService: UserService
+    private readonly userService: UserService,
+    private readonly config: ConfigService,
   ) {
     // Inicializar los objetos de consulta
     this.findCoursesByProgramTypeQuery = new FindCoursesByProgramTypeQuery(
@@ -40,7 +42,8 @@ export class TypeormCoursesRepository implements ICourseRepository {
       enrollmentRepository,
       blockAssignmentRepository,
       courseOfferingRepository,
-      userService
+      userService,
+      config
     );
   }
 
