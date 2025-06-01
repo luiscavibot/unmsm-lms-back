@@ -30,6 +30,11 @@ export class FilesService {
   async findOne(id: number): Promise<FileMetadata | null> {
     return this.filesRepository.findOne(id);
   }
+  
+  async findByHashedName(hashedName: string): Promise<FileMetadata | null> {
+    return this.filesRepository.findByHashedName(hashedName);
+  }
+  
   async remove(id: number): Promise<FileMetadata | null> {
     const file = await this.filesRepository.remove(id);
     if (file) {
@@ -37,6 +42,7 @@ export class FilesService {
     }
     return file;
   }
+  
   async update(id: number, file: Express.Multer.File, userId: string): Promise<FileMetadata | null> {
     const existingFile = await this.filesRepository.update(id, file, userId);
     if (existingFile) {

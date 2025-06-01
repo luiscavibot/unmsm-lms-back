@@ -186,8 +186,15 @@ export class UserService {
     }
   }
 
-  getFileUrl(fileMetadata: FileMetadata): string {
+  getFileUrl(fileMetadata: FileMetadata | string): string {
     const cdnUrl = this.config.get<string>('S3_CDN_URL') || this.config.get<string>('STORAGE_DOMAIN') || '';
-    return `${cdnUrl}/${fileMetadata.hashedName}`;
+    
+    if (typeof fileMetadata === 'string') {
+      // Si se proporciona directamente la ruta hasheada
+      return `${cdnUrl}/${fileMetadata}`;
+    } else {
+      // Si se proporciona el objeto FileMetadata completo
+      return `${cdnUrl}/${fileMetadata.hashedName}`;
+    }
   }
 }

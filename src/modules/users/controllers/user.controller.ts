@@ -74,18 +74,31 @@ export class UserController {
       throw new ForbiddenException('No tienes permisos para subir un currículum para este bloque. Solo los profesores responsables o colaboradores pueden hacerlo.');
     }
 
-    // Subir el archivo a la carpeta 'resumes/{userId}'
+    // Verificar si el usuario ya tiene un currículum subido
+    const currentUser = await this.userService.findOne(user.userId);
+    const existingResumeUrl = currentUser?.resumeUrl;
+    
+    // Si ya existe un CV previo, eliminarlo del storage y de la tabla files-metadata
+    if (existingResumeUrl) {
+      try {
+        const fileMetadata = await this.filesService.findByHashedName(existingResumeUrl);
+        if (fileMetadata) {
+          await this.filesService.remove(fileMetadata.id);
+        }
+      } catch (error) {
+        console.error('Error eliminando currículum antiguo:', error);
+      }
+    }
+
+    // Subir el nuevo archivo a la carpeta 'resumes/{userId}'
     const fileMetadata = await this.filesService.upload(file, user.userId, `resumes/${user.userId}`);
     
-    // Generar URL del archivo y actualizar el atributo en Cognito
-    const fileUrl = this.userService.getFileUrl(fileMetadata);
     await this.userService.updateUserAttribute(
       user.userId,
       'custom:resumeUrl',
-      fileUrl,
+      fileMetadata.hashedName,
     );
 
-    // Actualizar la fecha de actualización del currículum
     const currentDate = new Date().toISOString();
     await this.userService.updateUserAttribute(
       user.userId,
@@ -109,6 +122,22 @@ export class UserController {
 
     if (!userAssignment) {
       throw new ForbiddenException('No tienes permisos para eliminar el currículum de este bloque. Solo los profesores responsables o colaboradores pueden hacerlo.');
+    }
+
+    // Verificar si el usuario ya tiene un currículum subido
+    const currentUser = await this.userService.findOne(user.userId);
+    const existingResumeUrl = currentUser?.resumeUrl;
+    
+    // Si existe un CV, eliminarlo del storage y de la tabla files-metadata
+    if (existingResumeUrl) {
+      try {
+        const fileMetadata = await this.filesService.findByHashedName(existingResumeUrl);
+        if (fileMetadata) {
+          await this.filesService.remove(fileMetadata.id);
+        }
+      } catch (error) {
+        console.error('Error eliminando currículum:', error);
+      }
     }
 
     // Eliminar el valor del atributo en Cognito

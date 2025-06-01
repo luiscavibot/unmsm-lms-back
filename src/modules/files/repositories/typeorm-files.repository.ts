@@ -32,6 +32,10 @@ export class TypeormFilesRepository implements IFilesRepository {
     return this.fileMetadataRepository.findOne({ where: { id } });
   }
 
+  async findByHashedName(hashedName: string): Promise<FileMetadata | null> {
+    return this.fileMetadataRepository.findOne({ where: { hashedName } });
+  }
+
   async remove(id: number): Promise<FileMetadata | null> {
     const file = await this.findOne(id);
     if (file) {
