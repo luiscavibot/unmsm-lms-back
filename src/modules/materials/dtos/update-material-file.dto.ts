@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsUrl } from 'class-validator';
 import { MaterialType } from '../enums/material-type.enum';
 
 export class UpdateMaterialFileDto {
@@ -22,6 +22,16 @@ export class UpdateMaterialFileDto {
   @IsEnum(MaterialType)
   @IsOptional()
   type?: MaterialType;
+
+  @ApiProperty({
+    description: 'URL para materiales de tipo enlace externo',
+    example: 'https://example.com/resource',
+    required: false
+  })
+  @IsString()
+  @IsUrl()
+  @IsOptional()
+  url?: string;
 
   @ApiProperty({
     description: 'Nuevo archivo a subir (opcional)',

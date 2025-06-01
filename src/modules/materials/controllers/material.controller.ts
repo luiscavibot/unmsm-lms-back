@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiResponse, ApiConsumes, ApiBody, ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseInterceptors, UploadedFile, UseGuards, BadRequestException } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { MaterialService } from '../services/material.service';
 import { CreateMaterialDto } from '../dtos/create-material.dto';
@@ -11,6 +11,7 @@ import { UpdateMaterialFileDto } from '../dtos/update-material-file.dto';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
 import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
+import { MaterialType } from '../enums/material-type.enum';
 
 @Controller('materials')
 export class MaterialController {
@@ -75,15 +76,26 @@ export class MaterialController {
   })
   async uploadMaterial(
     @Body() uploadDto,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File | undefined,
     @CurrentUserToken() user: UserPayload
   ): Promise<Material> {
+    // Validar que si es tipo external_link tenga una URL
+    if (uploadDto.type === MaterialType.EXTERNAL_LINK && !uploadDto.url) {
+      throw new BadRequestException('La URL es requerida para materiales de tipo enlace externo');
+    }
+    
+    // Validar que si no es external_link se haya proporcionado un archivo
+    if (uploadDto.type !== MaterialType.EXTERNAL_LINK && !file) {
+      throw new BadRequestException('El archivo es requerido para este tipo de material');
+    }
+    
     const uploadMaterialDto: UploadMaterialDto = {
       weekId: uploadDto.weekId,
       title: uploadDto.title,
       type: uploadDto.type,
-      file: file
+      url: uploadDto.url
     };
+    
     return this.materialService.uploadMaterial(uploadMaterialDto, file, user.userId, user.rolName);
   }
 
@@ -119,7 +131,8 @@ export class MaterialController {
   ): Promise<Material> {
     const updateMaterialFileDto: UpdateMaterialFileDto = {
       title: updateDto.title,
-      type: updateDto.type
+      type: updateDto.type,
+      url: updateDto.url // Capturar la URL para los enlaces externos
     };
     return this.materialService.updateMaterialFile(id, updateMaterialFileDto, file, user.userId, user.rolName);
   }

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID, IsEnum, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsUUID, IsEnum, IsOptional, IsUrl } from 'class-validator';
 import { MaterialType } from '../enums/material-type.enum';
 
 export class UploadMaterialDto {
@@ -30,9 +30,20 @@ export class UploadMaterialDto {
   type: MaterialType;
 
   @ApiProperty({
+    description: 'URL para materiales de tipo enlace externo',
+    example: 'https://example.com/resource',
+    required: false
+  })
+  @IsString()
+  @IsUrl()
+  @IsOptional()
+  url?: string;
+
+  @ApiProperty({
     description: 'Archivo a subir',
     type: 'string',
     format: 'binary',
+    required: false
   })
-  file: Express.Multer.File;
+  file?: Express.Multer.File;
 }

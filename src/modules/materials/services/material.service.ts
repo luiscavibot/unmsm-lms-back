@@ -14,6 +14,8 @@ import { MaterialAccessType, MaterialPermissionResult } from '../dtos/material-p
 import { BlockRolType } from '../../block-assignments/enums/block-rol-type.enum';
 import { BlockAssignmentService } from '../../block-assignments/services/block-assignment.service';
 import { UpdateMaterialFileDto } from '../dtos/update-material-file.dto';
+import { FilesService } from '../../files/services/files.service';
+import { MaterialType } from '../enums/material-type.enum';
 
 @Injectable()
 export class MaterialService {
@@ -30,6 +32,7 @@ export class MaterialService {
     @Inject(IStorageService)
     private readonly storageService: IStorageService,
     private readonly blockAssignmentService: BlockAssignmentService,
+    private readonly filesService: FilesService,
   ) {}
 
   async create(createMaterialDto: CreateMaterialDto): Promise<Material> {
@@ -157,7 +160,7 @@ export class MaterialService {
 
   async uploadMaterial(
     uploadMaterialDto: UploadMaterialDto, 
-    file: Express.Multer.File, 
+    file: Express.Multer.File | undefined, 
     userId: string, 
     rolName: string | null
   ): Promise<Material> {
@@ -172,20 +175,39 @@ export class MaterialService {
     // Verificar que la semana existe
     const week = await this.weekService.findById(uploadMaterialDto.weekId);
     
-    // Sanitizar el nombre del archivo para seguridad
-    const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
-    
-    // Construir la ruta para el material
-    const path = `${this.MATERIALS_PATH_PREFIX}/weeks/${uploadMaterialDto.weekId}`;
-    const key = `${path}/${sanitizedFileName}`;
+    // Validar que el tipo de material sea coherente con lo que se está subiendo
+    if (uploadMaterialDto.url && uploadMaterialDto.type !== MaterialType.EXTERNAL_LINK) {
+      throw new BadRequestException('Si se proporciona una URL, el tipo de material debe ser obligatoriamente enlace externo');
+    }
+
+    if (file && uploadMaterialDto.type === MaterialType.EXTERNAL_LINK) {
+      throw new BadRequestException('No se puede subir un archivo para materiales de tipo enlace externo. Proporcione una URL en su lugar.');
+    }
     
     try {
-      // Subir el archivo usando el servicio de almacenamiento
-      const fileUrl = await this.storageService.uploadFile(
-        file.buffer, 
-        key, 
-        file.mimetype
-      );
+      let fileUrl = '';
+      
+      // Si es un enlace externo, usar directamente la URL
+      if (uploadMaterialDto.type === MaterialType.EXTERNAL_LINK) {
+        // Para enlaces externos, el campo fileUrl contiene directamente la URL
+        fileUrl = uploadMaterialDto.url || '';
+        
+        if (!fileUrl) {
+          throw new BadRequestException('La URL es requerida para materiales de tipo enlace externo');
+        }
+      } else {
+        // Si no es un enlace externo, debe haber un archivo para subir
+        if (!file) {
+          throw new BadRequestException('El archivo es requerido para este tipo de material');
+        }
+        
+        // Construir la ruta para el material
+        const path = `${this.MATERIALS_PATH_PREFIX}/weeks/${uploadMaterialDto.weekId}`;
+        
+        // Subir el archivo usando el servicio de files
+        const fileMetadata = await this.filesService.upload(file, userId, path);
+        fileUrl = fileMetadata.hashedName;
+      }
       
       // Crear el material en la base de datos
       const createMaterialDto: CreateMaterialDto = {
@@ -215,14 +237,28 @@ export class MaterialService {
       throw new ForbiddenException(permissionResult.message);
     }
     
-    // Verificar que el material tiene un archivo
+    // Verificar que el material tiene un archivo o URL
     if (!material.fileUrl) {
-      throw new NotFoundException(`Archivo para el material con ID ${id} no encontrado`);
+      throw new NotFoundException(`Archivo o URL para el material con ID ${id} no encontrado`);
     }
     
     try {
-      // Eliminar el archivo del storage
-      await this.storageService.deleteFile(material.fileUrl);
+      // Si es un enlace externo, solo eliminar el registro en la base de datos
+      if (material.type === MaterialType.EXTERNAL_LINK) {
+        this.logger.log(`El material ${id} es un enlace externo, solo se eliminará el registro`);
+      } else {
+        // Es un archivo, eliminar de S3 y files
+        // Buscar el archivo en la tabla files por su hashedName
+        const fileMetadata = await this.filesService.findByHashedName(material.fileUrl);
+        
+        // Si se encuentra el archivo en la tabla files, usar filesService para eliminarlo
+        if (fileMetadata) {
+          await this.filesService.remove(fileMetadata.id);
+        } else {
+          // Como fallback, intentar eliminar directamente del storage si no se encuentra en files
+          await this.storageService.deleteFile(material.fileUrl);
+        }
+      }
       
       // Eliminar el registro del material en la base de datos
       await this.remove(id);
@@ -258,44 +294,82 @@ export class MaterialService {
       updateData.title = updateMaterialFileDto.title;
     }
     
-    // Actualizar tipo si se proporciona
-    if (updateMaterialFileDto.type) {
-      updateData.type = updateMaterialFileDto.type;
+    // Determinar el tipo de material (nuevo o existente)
+    const newType = updateMaterialFileDto.type;
+    const isNewTypeExternalLink = newType === 'external_link';
+    const isExistingTypeExternalLink = existingMaterial.type === 'external_link';
+    
+    // Validar que el tipo de material sea coherente con lo que se está actualizando
+    if (updateMaterialFileDto.url && newType && newType !== 'external_link') {
+      throw new BadRequestException('Si se proporciona una URL, el tipo de material debe ser obligatoriamente enlace externo');
+    }
+
+    if (file && isNewTypeExternalLink) {
+      throw new BadRequestException('No se puede subir un archivo para materiales de tipo enlace externo. Proporcione una URL en su lugar.');
     }
     
-    // Si se proporciona un nuevo archivo, subirlo y actualizar la URL
-    if (file) {
-      try {
-        // Sanitizar el nombre del archivo para seguridad
-        const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    if (newType) {
+      updateData.type = newType;
+    }
+    
+    // Manejar los diferentes tipos de material
+    if (isNewTypeExternalLink || (isExistingTypeExternalLink && !newType)) {
+      // Si es o sigue siendo un enlace externo
+      if (updateMaterialFileDto.url) {
+        updateData.fileUrl = updateMaterialFileDto.url;
         
-        // Construir la ruta para el material
-        const path = `${this.MATERIALS_PATH_PREFIX}/weeks/${existingMaterial.weekId}`;
-        const key = `${path}/${sanitizedFileName}`;
-        
-        // Si ya existe un archivo, eliminarlo primero
-        if (existingMaterial.fileUrl) {
+        // Si anteriormente era un archivo (no external_link), eliminar el archivo existente
+        if (!isExistingTypeExternalLink && existingMaterial.fileUrl) {
           try {
-            await this.storageService.deleteFile(existingMaterial.fileUrl);
+            const existingFileMetadata = await this.filesService.findByHashedName(existingMaterial.fileUrl);
+            if (existingFileMetadata) {
+              await this.filesService.remove(existingFileMetadata.id);
+            } else {
+              await this.storageService.deleteFile(existingMaterial.fileUrl);
+            }
+          } catch (error) {
+            this.logger.warn(`No se pudo eliminar el archivo anterior al cambiar a enlace externo: ${error.message}`);
+          }
+        }
+      } else if (isNewTypeExternalLink && !isExistingTypeExternalLink) {
+        // Si se está cambiando a tipo external_link pero no se proporcionó una URL
+        throw new BadRequestException('La URL es requerida para materiales de tipo enlace externo');
+      }
+    } else if (file) {
+      // No es un enlace externo y se proporciona un archivo
+      try {
+        // Si ya existe un archivo físico (no external_link), eliminarlo primero
+        if (existingMaterial.fileUrl && !isExistingTypeExternalLink) {
+          try {
+            // Buscar el archivo en la tabla files por su hashedName
+            const existingFileMetadata = await this.filesService.findByHashedName(existingMaterial.fileUrl);
+            
+            // Si se encuentra el archivo en la tabla files, usar filesService para eliminarlo
+            if (existingFileMetadata) {
+              await this.filesService.remove(existingFileMetadata.id);
+            } else {
+              // Como fallback, intentar eliminar directamente del storage si no se encuentra en files
+              await this.storageService.deleteFile(existingMaterial.fileUrl);
+            }
           } catch (error) {
             this.logger.warn(`No se pudo eliminar el archivo anterior: ${error.message}`);
             // Continuamos con la actualización aunque no se pueda eliminar el archivo anterior
           }
         }
         
-        // Subir el nuevo archivo
-        const fileUrl = await this.storageService.uploadFile(
-          file.buffer, 
-          key, 
-          file.mimetype
-        );
+        // Construir la ruta para el material y subir utilizando FilesService
+        const path = `${this.MATERIALS_PATH_PREFIX}/weeks/${existingMaterial.weekId}`;
+        const fileMetadata = await this.filesService.upload(file, userId, path);
         
-        // Actualizar la URL del archivo
-        updateData.fileUrl = fileUrl;
+        // Actualizar la URL del archivo con el hashedName del archivo
+        updateData.fileUrl = fileMetadata.hashedName;
       } catch (error) {
         this.logger.error(`Error al actualizar el archivo del material ${id}: ${error.message}`);
         throw new BadRequestException(`Error al actualizar el archivo: ${error.message}`);
       }
+    } else if (newType && !isNewTypeExternalLink && isExistingTypeExternalLink) {
+      // Si se está cambiando de external_link a otro tipo pero no se proporciona un archivo
+      throw new BadRequestException('Se requiere un archivo para este tipo de material');
     }
     
     // Si no hay cambios, retornar el material existente

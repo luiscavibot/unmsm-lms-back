@@ -10,6 +10,7 @@ import { BlocksModule } from '../blocks/blocks.module';
 import { UsersModule } from '../users/users.module';
 import { StorageModule } from '../../common/storage/storage.module';
 import { BlockAssignmentsModule } from '../block-assignments/block-assignments.module';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { BlockAssignmentsModule } from '../block-assignments/block-assignments.m
     UsersModule,
     StorageModule,
     BlockAssignmentsModule,
+    FilesModule,
   ],
   controllers: [MaterialController],
   providers: [
