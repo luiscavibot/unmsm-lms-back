@@ -99,13 +99,6 @@ export class UserController {
       fileMetadata.hashedName,
     );
 
-    const currentDate = new Date().toISOString();
-    await this.userService.updateUserAttribute(
-      user.userId,
-      'custom:resumeDate',
-      currentDate,
-    );
-
     // Devolver el usuario actualizado
     return this.userService.findOne(user.userId);
   }
@@ -147,13 +140,6 @@ export class UserController {
       '',
     );
     
-    // Eliminar también la fecha de actualización
-    await this.userService.updateUserAttribute(
-      user.userId,
-      'custom:resumeDate',
-      '',
-    );
-
     // Devolver el usuario actualizado
     return this.userService.findOne(user.userId);
   }

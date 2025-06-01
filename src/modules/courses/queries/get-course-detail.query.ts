@@ -12,6 +12,7 @@ import { User } from '../../users/entities/user.entity';
 import { CourseUtils } from '../../../utils/course-utils';
 import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
 import { EnrollmentBlock } from '../../enrollment-blocks/entities/enrollment-block.entity';
+import { FilesService } from '../../files/services/files.service';
 
 export enum UserRoles {
   STUDENT = 'STUDENT',
@@ -30,6 +31,7 @@ export class GetCourseDetailQuery {
     @InjectRepository(EnrollmentBlock)
     private readonly enrollmentBlockRepository: Repository<EnrollmentBlock>,
     private readonly userService: UserService,
+    private readonly filesService: FilesService,
     private readonly config: ConfigService,
   ) {}
 
@@ -106,8 +108,15 @@ export class GetCourseDetailQuery {
       try {
         responsibleTeacher = await this.userService.findOne(teacherAssignment.userId);
         teacherName = responsibleTeacher.name;
-        teacherResumeUrl = responsibleTeacher.resumeUrl || '';
-        teacherResumeUpdateDate = responsibleTeacher.resumeUpdateDate || '';
+        
+        if (responsibleTeacher.resumeUrl) {
+          teacherResumeUrl = this.userService.getFileUrl(responsibleTeacher.resumeUrl);
+          
+          const fileMetadata = await this.filesService.findByHashedName(responsibleTeacher.resumeUrl);
+          if (fileMetadata) {
+            teacherResumeUpdateDate = fileMetadata.uploadDate.toISOString();
+          }
+        }
       } catch (error) {
         console.error('Error al obtener información del profesor:', error);
       }
@@ -194,19 +203,32 @@ export class GetCourseDetailQuery {
     let blockTeacherName: string | null = null;
     let teacherCvUrl: string = '';
     let teacherCvUpdateDate: string = '';
-
+    
     if (blockTeacherAssignment) {
       try {
         const blockTeacherUser = await this.userService.findOne(blockTeacherAssignment.userId);
         blockTeacherName = blockTeacherUser.name;
-        teacherCvUrl = blockTeacherUser.resumeUrl || '';
-        teacherCvUpdateDate = blockTeacherUser.resumeUpdateDate || '';
+        
+        if (blockTeacherUser.resumeUrl) {
+          teacherCvUrl = this.userService.getFileUrl(blockTeacherUser.resumeUrl);
+          
+          const fileMetadata = await this.filesService.findByHashedName(blockTeacherUser.resumeUrl);
+          if (fileMetadata) {
+            teacherCvUpdateDate = fileMetadata.uploadDate.toISOString();
+          }
+        }
       } catch (error) {
         console.error('Error al obtener información del profesor del bloque:', error);
       }
     } else if (responsibleTeacher) {
-      teacherCvUrl = responsibleTeacher.resumeUrl || '';
-      teacherCvUpdateDate = responsibleTeacher.resumeUpdateDate || '';
+      if (responsibleTeacher.resumeUrl) {
+        teacherCvUrl = this.userService.getFileUrl(responsibleTeacher.resumeUrl);
+        
+        const fileMetadata = await this.filesService.findByHashedName(responsibleTeacher.resumeUrl);
+        if (fileMetadata) {
+          teacherCvUpdateDate = fileMetadata.uploadDate.toISOString();
+        }
+      }
     }
 
     return { blockTeacherName, teacherCvUrl, teacherCvUpdateDate };
@@ -331,7 +353,7 @@ export class GetCourseDetailQuery {
       cv: {
         fileName: cvFileName,
         downloadUrl: teacherCvUrl,
-        updateDate: teacherCvUpdateDate
+        updateDate: teacherCvUpdateDate || ''
       },
       meetUrl: meetUrl,
     };

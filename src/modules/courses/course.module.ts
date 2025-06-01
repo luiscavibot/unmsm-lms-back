@@ -11,6 +11,7 @@ import { Block } from '../blocks/entities/block.entity';
 import { CourseOffering } from '../course-offerings/entities/course-offering.entity';
 import { UsersModule } from '../users/users.module';
 import { EnrollmentBlock } from '../enrollment-blocks/entities/enrollment-block.entity';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { EnrollmentBlock } from '../enrollment-blocks/entities/enrollment-block.
       CourseOffering,
       EnrollmentBlock,
     ]),
-    forwardRef(() => UsersModule)
+    forwardRef(() => UsersModule),
+    FilesModule
   ],
   controllers: [CourseController],
   providers: [

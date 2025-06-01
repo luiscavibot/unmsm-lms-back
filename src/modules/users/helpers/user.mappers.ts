@@ -9,7 +9,6 @@ export const mapUserFromCognito = (u: CognitoUser, g: GroupType[] = []): User =>
     email: u.Attributes?.find((a) => a.Name === 'email')?.Value ?? '',
     imgUrl: u.Attributes?.find((a) => a.Name === 'picture')?.Value ?? '',
     resumeUrl: u.Attributes?.find((a) => a.Name === 'custom:resumeUrl')?.Value ?? '',
-    resumeUpdateDate: u.Attributes?.find((a) => a.Name === 'custom:resumeDate')?.Value ?? '',
     enabled: u.Enabled ?? false,
     status: u.UserStatus ?? 'UNCONFIRMED',
   };

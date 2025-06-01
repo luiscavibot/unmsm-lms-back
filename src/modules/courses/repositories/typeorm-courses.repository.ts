@@ -14,6 +14,7 @@ import { FindCoursesByProgramTypeQuery, UserRoles } from '../queries/find-course
 import { GetCourseDetailQuery } from '../queries/get-course-detail.query';
 import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
 import { EnrollmentBlock } from '../../enrollment-blocks/entities/enrollment-block.entity';
+import { FilesService } from '../../files/services/files.service';
 
 @Injectable()
 export class TypeormCoursesRepository implements ICourseRepository {
@@ -32,6 +33,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
     @InjectRepository(EnrollmentBlock)
     private readonly enrollmentBlockRepository: Repository<EnrollmentBlock>,
     private readonly userService: UserService,
+    private readonly filesService: FilesService,
     private readonly config: ConfigService,
   ) {
     // Inicializar los objetos de consulta
@@ -47,6 +49,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
       courseOfferingRepository,
       enrollmentBlockRepository,
       userService,
+      filesService,
       config
     );
   }
