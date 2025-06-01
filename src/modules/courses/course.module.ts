@@ -10,6 +10,7 @@ import { BlockAssignment } from '../block-assignments/entities/block-assignment.
 import { Block } from '../blocks/entities/block.entity';
 import { CourseOffering } from '../course-offerings/entities/course-offering.entity';
 import { UsersModule } from '../users/users.module';
+import { EnrollmentBlock } from '../enrollment-blocks/entities/enrollment-block.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsersModule } from '../users/users.module';
       BlockAssignment, 
       Block, 
       CourseOffering,
+      EnrollmentBlock,
     ]),
     forwardRef(() => UsersModule)
   ],

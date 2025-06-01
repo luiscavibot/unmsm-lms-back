@@ -13,6 +13,7 @@ import { UserService } from '../../users/services/user.service';
 import { FindCoursesByProgramTypeQuery, UserRoles } from '../queries/find-courses-by-program-type.query';
 import { GetCourseDetailQuery } from '../queries/get-course-detail.query';
 import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
+import { EnrollmentBlock } from '../../enrollment-blocks/entities/enrollment-block.entity';
 
 @Injectable()
 export class TypeormCoursesRepository implements ICourseRepository {
@@ -28,6 +29,8 @@ export class TypeormCoursesRepository implements ICourseRepository {
     private readonly blockAssignmentRepository: Repository<BlockAssignment>,
     @InjectRepository(CourseOffering)
     private readonly courseOfferingRepository: Repository<CourseOffering>,
+    @InjectRepository(EnrollmentBlock)
+    private readonly enrollmentBlockRepository: Repository<EnrollmentBlock>,
     private readonly userService: UserService,
     private readonly config: ConfigService,
   ) {
@@ -42,6 +45,7 @@ export class TypeormCoursesRepository implements ICourseRepository {
       enrollmentRepository,
       blockAssignmentRepository,
       courseOfferingRepository,
+      enrollmentBlockRepository,
       userService,
       config
     );

@@ -11,6 +11,7 @@ import { UserService } from '../../users/services/user.service';
 import { User } from '../../users/entities/user.entity';
 import { CourseUtils } from '../../../utils/course-utils';
 import { CourseOffering } from '../../course-offerings/entities/course-offering.entity';
+import { EnrollmentBlock } from '../../enrollment-blocks/entities/enrollment-block.entity';
 
 export enum UserRoles {
   STUDENT = 'STUDENT',
@@ -26,6 +27,8 @@ export class GetCourseDetailQuery {
     private readonly blockAssignmentRepository: Repository<BlockAssignment>,
     @InjectRepository(CourseOffering)
     private readonly courseOfferingRepository: Repository<CourseOffering>,
+    @InjectRepository(EnrollmentBlock)
+    private readonly enrollmentBlockRepository: Repository<EnrollmentBlock>,
     private readonly userService: UserService,
     private readonly config: ConfigService,
   ) {}
@@ -150,6 +153,26 @@ export class GetCourseDetailQuery {
           userId,
           theoryType: BlockType.THEORY
         });
+      }
+    }
+    // Si es estudiante, traemos solo los bloques asociados a su matrícula
+    else if (roleName === UserRoles.STUDENT && userId) {
+      // Primero encontramos la matrícula del estudiante para este curso
+      const enrollment = await this.enrollmentRepository.findOne({
+        where: {
+          userId,
+          courseOfferingId
+        }
+      });
+      
+      if (enrollment) {
+        // Unimos con enrollment_blocks para filtrar solo los bloques asociados a la matrícula
+        query.innerJoin(
+          'enrollment_blocks',
+          'enrollmentBlock',
+          'enrollmentBlock.blockId = block.id AND enrollmentBlock.enrollmentId = :enrollmentId',
+          { enrollmentId: enrollment.id }
+        );
       }
     }
     
