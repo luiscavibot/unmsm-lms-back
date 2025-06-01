@@ -8,6 +8,7 @@ import { IStorageService } from '../../../common/storage/interfaces/storage.serv
 import { BlockAssignmentService } from '../../block-assignments/services/block-assignment.service';
 import { BlockRolType } from '../../block-assignments/enums/block-rol-type.enum';
 import { SyllabusAccessType, SyllabusPermissionResult } from '../dtos/syllabus-permission.dto';
+import { FilesService } from '../../files/services/files.service';
 
 @Injectable()
 export class BlockService {
@@ -18,6 +19,7 @@ export class BlockService {
     private readonly storageService: IStorageService,
     @Inject(forwardRef(() => BlockAssignmentService))
     private readonly blockAssignmentService: BlockAssignmentService,
+    private readonly filesService: FilesService,
   ) {}
 
   async findAll(): Promise<Block[]> {
@@ -129,33 +131,28 @@ export class BlockService {
     // Verificar que el bloque existe
     const block = await this.findById(id);
     
-    // Si ya existe un syllabus previo, eliminarlo
+    // Si ya existe un syllabus previo, buscarlo en la tabla files para eliminarlo
     if (block.syllabusUrl) {
       try {
-        await this.storageService.deleteFile(block.syllabusUrl);
+        const existingFileMetadata = await this.filesService.findByHashedName(block.syllabusUrl);
+        if (existingFileMetadata) {
+          // Eliminar el archivo de S3 y de la tabla files
+          await this.filesService.remove(existingFileMetadata.id);
+        }
       } catch (error) {
-        console.log('Error eliminando syllabus antiguo, posiblemente no existe', error);
+        console.log('Error eliminando syllabus antiguo:', error);
       }
     }
     
     // Construir la ruta para el syllabus
     const path = `syllabus/blocks/${id}`;
-    const key = `${path}/${file.originalname}`;
     
-    // Subir el archivo usando el servicio de almacenamiento
-    const hashedKey = await this.storageService.uploadFile(
-      file.buffer, 
-      key, 
-      file.mimetype
-    );
+    // Subir el archivo usando el servicio de files (que maneja tanto S3 como la metadata)
+    const fileMetadata = await this.filesService.upload(file, userId, path);
     
-    // Obtener la fecha actual en formato ISO
-    const currentDate = new Date().toISOString();
-    
-    // Actualizar la URL del syllabus en el bloque y la fecha de actualización
+    // Actualizar la URL del syllabus en el bloque
     const updatedBlock = await this.blockRepository.update(id, { 
-      syllabusUrl: hashedKey,
-      syllabusUpdateDate: currentDate
+      syllabusUrl: fileMetadata.hashedName
     });
     if (!updatedBlock) {
       throw new NotFoundException(`Block with ID ${id} not found`);
@@ -179,17 +176,20 @@ export class BlockService {
       throw new NotFoundException(`Syllabus for block with ID ${id} not found`);
     }
     
-    // Eliminar el archivo del storage
+    // Buscar el archivo en la tabla files y eliminarlo
     try {
-      await this.storageService.deleteFile(block.syllabusUrl);
+      const fileMetadata = await this.filesService.findByHashedName(block.syllabusUrl);
+      if (fileMetadata) {
+        // Eliminar el archivo de S3 y de la tabla files
+        await this.filesService.remove(fileMetadata.id);
+      }
     } catch (error) {
-      console.log('Error eliminando syllabus, posiblemente no existe', error);
+      console.log('Error eliminando syllabus:', error);
     }
     
-    // Actualizar el registro en la base de datos para eliminar la referencia y la fecha
+    // Actualizar el registro en la base de datos para eliminar la referencia
     const updatedBlock = await this.blockRepository.update(id, { 
-      syllabusUrl: '',
-      syllabusUpdateDate: ''
+      syllabusUrl: ''
     });
     if (!updatedBlock) {
       throw new NotFoundException(`Block with ID ${id} not found`);

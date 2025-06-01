@@ -141,7 +141,6 @@ export class GetCourseDetailQuery {
       .addSelect('block.group', 'group')
       .addSelect('block.classroomNumber', 'aula')
       .addSelect('block.syllabusUrl', 'syllabusUrl')
-      .addSelect('block.syllabusUpdateDate', 'syllabusUpdateDate')
       .innerJoin('blockAssignment.block', 'block')
       .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId });
     
@@ -332,9 +331,21 @@ export class GetCourseDetailQuery {
     
     // Construir la URL completa del silabo
     let syllabusUrl = block.syllabusUrl || '';
+    let syllabusUpdateDate = '';
+    
     if (syllabusUrl) {
       const cdnUrl = this.config.get<string>('S3_CDN_URL') || this.config.get<string>('STORAGE_DOMAIN') || '';
       syllabusUrl = `${cdnUrl}/${syllabusUrl}`;
+      
+      // Obtener la fecha de actualización del syllabus desde la tabla files
+      try {
+        const fileMetadata = await this.filesService.findByHashedName(block.syllabusUrl);
+        if (fileMetadata) {
+          syllabusUpdateDate = fileMetadata.uploadDate.toISOString();
+        }
+      } catch (error) {
+        console.error('Error obteniendo metadata del syllabus:', error);
+      }
     }
 
     // Crear el objeto de detalle del bloque
@@ -348,7 +359,7 @@ export class GetCourseDetailQuery {
       syllabus: {
         fileName: syllabusFileName,
         downloadUrl: syllabusUrl,
-        updateDate: block.syllabusUpdateDate || ''
+        updateDate: syllabusUpdateDate
       },
       cv: {
         fileName: cvFileName,

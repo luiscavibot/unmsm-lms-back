@@ -8,6 +8,7 @@ import { TypeormBlocksRepository } from './repositories/typeorm-blocks.repositor
 import { CourseOfferingModule } from '../course-offerings/course-offering.module';
 import { StorageModule } from '../../common/storage/storage.module';
 import { BlockAssignmentsModule } from '../block-assignments/block-assignments.module';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { BlockAssignmentsModule } from '../block-assignments/block-assignments.m
     forwardRef(() => CourseOfferingModule),
     StorageModule,
     forwardRef(() => BlockAssignmentsModule),
+    FilesModule,
   ],
   controllers: [BlockController],
   providers: [
