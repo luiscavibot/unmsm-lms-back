@@ -79,9 +79,48 @@ export class MaterialService {
     await this.materialRepository.delete(id);
   }
 
-  async findMaterialsByBlockId(blockId: string): Promise<WeekWithMaterialsDto[]> {
+  async findMaterialsByBlockId(blockId: string, userId?: string, rolName?: string | null): Promise<WeekWithMaterialsDto[]> {
     await this.blockService.findById(blockId);
-    return await this.materialRepository.findByBlockId(blockId);
+    
+    // Si es STUDENT, mantener la lógica actual (traer solo semanas con materiales)
+    if (rolName === 'STUDENT') {
+      return await this.materialRepository.findByBlockId(blockId);
+    } 
+    // Si es TEACHER, traer todas las semanas aunque no tengan materiales
+    else if (rolName === 'TEACHER') {
+      const weeks = await this.weekService.findByBlockId(blockId);
+      const materialsData = await this.materialRepository.findByBlockId(blockId);
+      
+      // Crear un mapa con los datos de materiales existentes
+      const materialsMap = new Map();
+      materialsData.forEach(weekWithMaterials => {
+        materialsMap.set(weekWithMaterials.id, weekWithMaterials);
+      });
+      
+      // Incluir todas las semanas, tengan o no materiales
+      const result: WeekWithMaterialsDto[] = [];
+      weeks.forEach(week => {
+        // Si ya tenemos esta semana con materiales, la usamos
+        if (materialsMap.has(week.id)) {
+          result.push(materialsMap.get(week.id));
+        } else {
+          // Si no tiene materiales, crear una entrada vacía para la semana
+          result.push({
+            id: week.id,
+            week: `Semana ${week.number}`,
+            weekNumber: week.number,
+            materials: []
+          });
+        }
+      });
+      
+      // Ordenar por número de semana en orden descendente
+      return result.sort((a, b) => b.weekNumber - a.weekNumber);
+    } 
+    // Para otros roles o sin rol, usar la lógica por defecto
+    else {
+      return await this.materialRepository.findByBlockId(blockId);
+    }
   }
 
   async checkMaterialPermissions(userId: string, rolName: string | null, weekId: string): Promise<MaterialPermissionResult> {

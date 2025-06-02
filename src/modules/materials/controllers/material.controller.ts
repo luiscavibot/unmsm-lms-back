@@ -54,6 +54,7 @@ export class MaterialController {
   }
 
   @Get('block/:blockId')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Obtener todos los materiales agrupados por semana para un bloque específico' })
   @ApiParam({ name: 'blockId', description: 'ID del bloque' })
   @ApiResponse({
@@ -61,8 +62,11 @@ export class MaterialController {
     description: 'Lista de materiales agrupados por semana para el bloque',
     type: [WeekWithMaterialsDto]
   })
-  async findByBlockId(@Param('blockId') blockId: string): Promise<WeekWithMaterialsDto[]> {
-    return await this.materialService.findMaterialsByBlockId(blockId);
+  async findByBlockId(
+    @Param('blockId') blockId: string,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<WeekWithMaterialsDto[]> {
+    return await this.materialService.findMaterialsByBlockId(blockId, user.userId, user.rolName);
   }
 
   @Post('upload')
