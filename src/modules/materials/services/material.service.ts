@@ -84,7 +84,9 @@ export class MaterialService {
     
     // Si es STUDENT, mantener la lógica actual (traer solo semanas con materiales)
     if (rolName === 'STUDENT') {
-      return await this.materialRepository.findByBlockId(blockId);
+      const materials = await this.materialRepository.findByBlockId(blockId);
+      // Ordenar por número de semana en orden descendente para estudiantes
+      return materials.sort((a, b) => b.weekNumber - a.weekNumber);
     } 
     // Si es TEACHER, traer todas las semanas aunque no tengan materiales
     else if (rolName === 'TEACHER') {
@@ -114,12 +116,14 @@ export class MaterialService {
         }
       });
       
-      // Ordenar por número de semana en orden descendente
-      return result.sort((a, b) => b.weekNumber - a.weekNumber);
+      // Ordenar por número de semana en orden ASCENDENTE para profesores
+      return result.sort((a, b) => a.weekNumber - b.weekNumber);
     } 
     // Para otros roles o sin rol, usar la lógica por defecto
     else {
-      return await this.materialRepository.findByBlockId(blockId);
+      const materials = await this.materialRepository.findByBlockId(blockId);
+      // Ordenar por defecto como si fuera estudiante
+      return materials.sort((a, b) => b.weekNumber - a.weekNumber);
     }
   }
 
