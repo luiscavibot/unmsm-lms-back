@@ -46,10 +46,11 @@ export class MaterialResponseDto {
   materialUrl: string;
 
   @ApiProperty({
-    description: 'Nombre del archivo',
-    example: 'material-name.mp4',
+    description: 'Extensión del archivo',
+    example: 'pdf',
+    nullable: true
   })
-  materialName: string;
+  fileExtension: string;
 }
 
 export class WeekWithMaterialsDto {

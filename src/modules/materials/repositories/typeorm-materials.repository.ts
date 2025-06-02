@@ -58,7 +58,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
           'material.fileUrl as materialUrl',
         ])
         .orderBy('week.number', 'DESC')
-        .addOrderBy('material.title', 'ASC');
+        .addOrderBy('material.date', 'DESC');
 
       const materialsData = await query.getRawMany();
 
@@ -78,11 +78,14 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
 
         const week = weekMap.get(item.weekId);
 
-        // Extraer el nombre del archivo de la URL
-        let materialName = '';
-        if (item.materialUrl) {
-          const urlParts = item.materialUrl.split('/');
-          materialName = urlParts[urlParts.length - 1];
+        // Extraer la extensión del archivo de la URL
+        let fileExtension = '';
+        if (item.materialUrl && item.materialType !== MaterialType.EXTERNAL_LINK) {
+          // Si el URL contiene un punto, extraemos la extensión
+          if (item.materialUrl.includes('.')) {
+            const urlParts = item.materialUrl.split('.');
+            fileExtension = urlParts[urlParts.length - 1];
+          }
         }
 
         // Formatear la fecha
@@ -105,7 +108,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
           uploadedById: item.uploadedById,
           uploadedByName: userName.name,
           materialUrl: materialUrl,
-          materialName: materialName,
+          fileExtension: fileExtension,
         });
       }
 
