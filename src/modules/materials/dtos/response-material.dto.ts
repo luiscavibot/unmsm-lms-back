@@ -51,6 +51,15 @@ export class MaterialResponseDto {
     nullable: true
   })
   fileExtension: string;
+
+  @ApiProperty({
+    description: 'Etiquetas del material',
+    example: ['RECENT'],
+    type: [String],
+    isArray: true,
+    default: []
+  })
+  labels: string[];
 }
 
 export class WeekWithMaterialsDto {

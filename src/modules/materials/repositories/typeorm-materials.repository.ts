@@ -100,6 +100,18 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
           materialUrl = `${cdnUrl}${materialUrl}`;
         }
 
+        // Para cada semana, verificar si este es el primer material (el más reciente)
+        // porque los resultados ya están ordenados por fecha desc
+        const isFirstMaterialInWeek = week.materials.length === 0;
+        
+        // Calcular si el material es reciente (dentro de los últimos 7 días)
+        const isRecent = item.uploadDate ? 
+          (new Date().getTime() - new Date(item.uploadDate).getTime()) / (1000 * 60 * 60 * 24) <= 7 : 
+          false;
+        
+        // Determinar las etiquetas según las condiciones
+        const labels = (isFirstMaterialInWeek && isRecent) ? ['RECENT'] : [];
+
         week.materials.push({
           materialId: item.materialId,
           name: item.name,
@@ -109,6 +121,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
           uploadedByName: userName.name,
           materialUrl: materialUrl,
           fileExtension: fileExtension,
+          labels: labels,
         });
       }
 
