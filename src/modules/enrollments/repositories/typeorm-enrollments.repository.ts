@@ -34,4 +34,12 @@ export class TypeormEnrollmentsRepository implements IEnrollmentRepository {
   async delete(id: string): Promise<void> {
     await this.enrollmentRepository.delete(id);
   }
+
+  async findByUserIdAndBlockId(userId: string, blockId: string): Promise<Enrollment | null> {
+    return await this.enrollmentRepository.createQueryBuilder('enrollment')
+      .innerJoin('enrollment.courseOffering', 'courseOffering')
+      .innerJoin('blocks', 'block', 'block.courseOfferingId = courseOffering.id AND block.id = :blockId', { blockId })
+      .where('enrollment.userId = :userId', { userId })
+      .getOne();
+  }
 }

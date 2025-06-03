@@ -49,4 +49,8 @@ export class EnrollmentService {
     await this.findOne(id);
     await this.enrollmentRepository.delete(id);
   }
+
+  async findByUserIdAndBlockId(userId: string, blockId: string): Promise<Enrollment | null> {
+    return await this.enrollmentRepository.findByUserIdAndBlockId(userId, blockId);
+  }
 }

@@ -59,9 +59,32 @@ export class AttendanceService {
     await this.attendanceRepository.delete(id);
   }
 
-  async findAttendancesByBlockId(blockId: string): Promise<AttendanceByWeekResponseDto> {
+  async findAttendancesByBlockId(blockId: string, userId?: string): Promise<AttendanceByWeekResponseDto> {
+    // Verificar que el bloque existe
     await this.blockService.findById(blockId);
-    return await this.attendanceRepository.findAttendancesByBlockId(blockId);
+    
+    // Si se proporciona un userId, buscar la matrícula correspondiente
+    let enrollmentId: string | undefined;
+    if (userId) {
+      try {
+        const enrollment = await this.enrollmentService.findByUserIdAndBlockId(userId, blockId);
+        if (enrollment) {
+          enrollmentId = enrollment.id;
+        } else {
+          // Si no hay matrícula pero se proporcionó un userId, devolvemos un resultado vacío
+          // ya que el usuario no está matriculado en este bloque
+          return {
+            attendancePercentage: '0%',
+            weeks: [],
+          };
+        }
+      } catch (error) {
+        console.error('Error al buscar la matrícula:', error);
+        // En caso de error, continuamos sin filtrar por enrollmentId
+      }
+    }
+    
+    return await this.attendanceRepository.findAttendancesByBlockId(blockId, enrollmentId);
   }
 
   /**

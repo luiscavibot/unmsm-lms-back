@@ -125,7 +125,7 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
     });
   }
 
-  async findAttendancesByBlockId(blockId: string): Promise<AttendanceByWeekResponseDto> {
+  async findAttendancesByBlockId(blockId: string, enrollmentId?: string): Promise<AttendanceByWeekResponseDto> {
     try {
       // Query para obtener todas las asistencias relacionadas a este bloque
       const query = this.attendanceRepository.createQueryBuilder('attendance')
@@ -133,17 +133,23 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
         .innerJoin('classSession.block', 'block')
         .innerJoin('classSession.week', 'week')
         .innerJoin('attendance.enrollment', 'enrollment')
-        .where('block.id = :blockId', { blockId })
-        .select([
-          'attendance.id',
-          'attendance.status',
-          'attendance.attendanceDate',
-          'classSession.sessionDate',
-          'classSession.id',
-          'week.id',
-          'week.number',
-        ])
-        .orderBy('classSession.sessionDate', 'ASC');
+        .where('block.id = :blockId', { blockId });
+
+      // Si se proporciona un enrollmentId, filtrar solo las asistencias de ese estudiante
+      if (enrollmentId) {
+        query.andWhere('attendance.enrollmentId = :enrollmentId', { enrollmentId });
+      }
+
+      query.select([
+        'attendance.id',
+        'attendance.status',
+        'attendance.attendanceDate',
+        'classSession.sessionDate',
+        'classSession.id',
+        'week.id',
+        'week.number',
+      ])
+      .orderBy('classSession.sessionDate', 'ASC');
 
       const attendances = await query.getMany();
       

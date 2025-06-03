@@ -76,16 +76,21 @@ export class AttendanceController {
   }
 
   @Get('block/:id')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Obtener asistencias por bloque agrupadas por semana',
-    description: 'Devuelve todas las asistencias de un bloque específico agrupadas por semana, incluyendo el porcentaje de asistencia general'
+    description: 'Devuelve todas las asistencias de un bloque específico agrupadas por semana para el usuario autenticado, incluyendo el porcentaje de asistencia general'
   })
   @ApiResponse({
     status: 200,
     description: 'Asistencias agrupadas por semana',
     type: AttendanceByWeekResponseDto
   })
-  async findAttendancesByBlockId(@Param('id') id: string): Promise<AttendanceByWeekResponseDto> {
-    return await this.attendanceService.findAttendancesByBlockId(id);
+  async findAttendancesByBlockId(
+    @Param('id') id: string,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<AttendanceByWeekResponseDto> {
+    return await this.attendanceService.findAttendancesByBlockId(id, user.userId);
   }
 }
