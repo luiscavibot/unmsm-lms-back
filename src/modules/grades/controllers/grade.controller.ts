@@ -6,6 +6,7 @@ import { CreateGradeDto } from '../dtos/create-grade.dto';
 import { UpdateGradeDto } from '../dtos/update-grade.dto';
 import { BlockGradeDto } from '../dtos/block-grade.dto';
 import { BlockGradeResponseDto } from '../dtos/block-grade-response.dto';
+import { BulkGradeResponseDto } from '../dtos/bulk-grade-response.dto';
 import { JwtAuthGuard } from '../../../common/auth/guards/jwt-auth.guard';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
@@ -59,12 +60,12 @@ export class GradeController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Registrar calificaciones por bloque',
-    description: 'Registra calificaciones de múltiples estudiantes para múltiples evaluaciones en un bloque académico. Calcula y actualiza automáticamente promedios de bloque y curso. Requiere autenticación y rol de profesor.'
+    description: 'Registra calificaciones de múltiples estudiantes para múltiples evaluaciones en un bloque académico. Procesa las calificaciones de forma masiva en una sola transacción. Calcula y actualiza automáticamente promedios de bloque y curso. Requiere autenticación y rol de profesor.'
   })
   @ApiResponse({
     status: 200,
     description: 'Calificaciones registradas exitosamente',
-    type: BlockGradeResponseDto
+    type: BulkGradeResponseDto
   })
   @ApiResponse({
     status: 403,
@@ -74,16 +75,36 @@ export class GradeController {
     @Param('blockId') blockId: string,
     @Body() blockGradeDto: BlockGradeDto,
     @CurrentUserToken() user: UserPayload
-  ): Promise<BlockGradeResponseDto> {
-    // Asegurar que el blockId de la URL y el del DTO coincidan
-    if (blockId !== blockGradeDto.blockId) {
-      blockGradeDto.blockId = blockId; // Priorizar el blockId de la URL
-    }
+  ): Promise<BulkGradeResponseDto> {
+    console.log(`[Grades Controller] Iniciando registro de notas para bloque ${blockId} - ${new Date().toISOString()}`);
+    console.log(`[Grades Controller] Total de estudiantes: ${blockGradeDto.studentGrades.length}`);
     
-    return await this.gradeService.registerBlockGrades(
+    // Asignar siempre el blockId del path param
+    blockGradeDto.blockId = blockId;
+    
+    // Medir tiempo de procesamiento (solo para logs)
+    const startTime = Date.now();
+    
+    // Procesar las calificaciones
+    console.log(`[Grades Controller] Llamando al servicio - ${new Date().toISOString()}`);
+    const result = await this.gradeService.registerBlockGrades(
       blockGradeDto,
       user.userId,
       user.rolName
     );
+    
+    // Calcular tiempo de procesamiento (solo para logs)
+    const endTime = Date.now();
+    console.log(`[Grades Controller] Servicio completado en ${endTime - startTime}ms - ${new Date().toISOString()}`);
+    
+    // Crear respuesta optimizada en formato BulkGradeResponseDto
+    const response: BulkGradeResponseDto = {
+      processed: result.grades,
+      totalProcessed: result.totalProcessed,
+      blockInfo: result.blockInfo
+    };
+    
+    console.log(`[Grades Controller] Finalizando registro de notas - ${new Date().toISOString()}`);
+    return response;
   }
 }

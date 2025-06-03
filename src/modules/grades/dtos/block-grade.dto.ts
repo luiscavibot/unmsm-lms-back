@@ -24,12 +24,12 @@ export class StudentGradeDto {
 
 export class BlockGradeDto {
   @ApiProperty({
-    description: 'ID del bloque académico',
-    example: '123e4567-e89b-12d3-a456-426614174000'
+    description: 'ID del bloque académico (opcional, se usará el del path param)',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+    required: false
   })
   @IsUUID()
-  @IsNotEmpty()
-  blockId: string;
+  blockId?: string;
 
   @ApiProperty({
     description: 'Lista de estudiantes con sus calificaciones',

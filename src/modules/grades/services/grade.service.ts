@@ -85,10 +85,14 @@ export class GradeService {
    * @param rolName Rol del usuario que registra las calificaciones
    */
   async registerBlockGrades(blockGradeDto: BlockGradeDto, userId: string, rolName: string | null): Promise<BlockGradeResponseDto> {
-    // 1. Validar el bloque
-    const block = await this.blockService.findById(blockGradeDto.blockId);
+    console.log(`[Grades Service] Iniciando procesamiento - ${new Date().toISOString()}`);
+    
+    // 1. Validar el bloque (blockId siempre viene del path param)
+    const blockId: string = blockGradeDto.blockId as string; // Aseguramos que es string
+    console.log(`[Grades Service] Validando bloque ${blockId}`);
+    const block = await this.blockService.findById(blockId);
     if (!block) {
-      throw new NotFoundException(`Bloque con ID ${blockGradeDto.blockId} no encontrado`);
+      throw new NotFoundException(`Bloque con ID ${blockId} no encontrado`);
     }
 
     // 2. Validar permisos del usuario (solo profesores asignados al bloque pueden registrar notas)
@@ -97,6 +101,7 @@ export class GradeService {
     }
 
     // 3. Recopilar todos los IDs de evaluación para validarlos en conjunto
+    console.log(`[Grades Service] Recopilando IDs de evaluación`);
     const allEvaluationIds = new Set<string>();
     blockGradeDto.studentGrades.forEach(student => {
       student.gradeRecords.forEach(record => {
@@ -104,98 +109,154 @@ export class GradeService {
       });
     });
     const evaluationIds = Array.from(allEvaluationIds);
+    console.log(`[Grades Service] Total de evaluaciones: ${evaluationIds.length}`);
+    
+    // Cachés para almacenar las validaciones y evitar consultas repetidas
+    const evaluationCache = new Map<string, any>();
+    const enrollmentCache = new Map<string, any>();
     
     // 4. Validar que todas las evaluaciones existen y pertenecen al bloque
-    for (const evaluationId of evaluationIds) {
-      const evaluation = await this.evaluationService.findById(evaluationId);
-      if (!evaluation) {
-        throw new NotFoundException(`Evaluación con ID ${evaluationId} no encontrada`);
-      }
-      
-      if (evaluation.blockId !== blockGradeDto.blockId) {
-        throw new ForbiddenException(`La evaluación ${evaluationId} no pertenece al bloque especificado`);
-      }
-    }
+    console.log(`[Grades Service] Validando evaluaciones - ${new Date().toISOString()}`);
+    const startValidateEvals = Date.now();
     
-    // 5. Procesar cada estudiante y sus calificaciones
-    const gradeResults: Grade[] = [];
-    const studentAverages: StudentAverageDto[] = [];
-    
-    for (const student of blockGradeDto.studentGrades) {
-      // Validar que el estudiante está matriculado
-      await this.enrollmentService.findOne(student.enrollmentId);
-      
-      // Procesar cada evaluación del estudiante
-      for (const gradeRecord of student.gradeRecords) {
-        // Buscar si ya existe una calificación para esta evaluación y estudiante
-        const existingGrade = await this.gradeRepository.findByEvaluationAndEnrollment(
-          gradeRecord.evaluationId,
-          student.enrollmentId
-        );
-        
-        let grade: Grade;
-        
-        if (existingGrade) {
-          // Actualizar registro existente
-          grade = await this.gradeRepository.update(
-            existingGrade.id,
-            { score: gradeRecord.score }
-          ) as Grade;
-        } else {
-          // Crear nuevo registro
-          grade = await this.gradeRepository.create({
-            evaluationId: gradeRecord.evaluationId,
-            enrollmentId: student.enrollmentId,
-            score: gradeRecord.score
-          });
+    // Validar evaluaciones en paralelo
+    await Promise.all(evaluationIds.map(async (evaluationId) => {
+      // Verificar si ya está en caché
+      if (!evaluationCache.has(evaluationId)) {
+        const evaluation = await this.evaluationService.findById(evaluationId);
+        if (!evaluation) {
+          throw new NotFoundException(`Evaluación con ID ${evaluationId} no encontrada`);
         }
         
-        gradeResults.push(grade);
+        if (evaluation.blockId !== blockId) {
+          throw new ForbiddenException(`La evaluación ${evaluationId} no pertenece al bloque especificado`);
+        }
+        
+        evaluationCache.set(evaluationId, evaluation);
       }
-      
+    }));
+    
+    console.log(`[Grades Service] Validación de evaluaciones completada en ${Date.now() - startValidateEvals}ms`);
+    
+    // 5. Preparar todas las calificaciones para procesamiento masivo
+    console.log(`[Grades Service] Preparando calificaciones para procesamiento masivo - ${new Date().toISOString()}`);
+    const gradesToProcess: { enrollmentId: string; evaluationId: string; score: number; id?: string }[] = [];
+    
+    // Recopilar todos los enrollmentIds para validar y luego buscar calificaciones existentes
+    const enrollmentIds: string[] = blockGradeDto.studentGrades.map(student => student.enrollmentId);
+    console.log(`[Grades Service] Total de estudiantes: ${enrollmentIds.length}`);
+    
+    // Validar que todos los estudiantes están matriculados - en paralelo
+    console.log(`[Grades Service] Validando matrículas - ${new Date().toISOString()}`);
+    const startValidateEnrollments = Date.now();
+    await Promise.all(enrollmentIds.map(async (enrollmentId) => {
+      // Verificar si ya está en caché
+      if (!enrollmentCache.has(enrollmentId)) {
+        const enrollment = await this.enrollmentService.findOne(enrollmentId);
+        enrollmentCache.set(enrollmentId, enrollment);
+      }
+    }));
+    console.log(`[Grades Service] Validación de matrículas completada en ${Date.now() - startValidateEnrollments}ms`);
+    
+    // Buscar calificaciones existentes para optimizar la actualización
+    console.log(`[Grades Service] Buscando calificaciones existentes - ${new Date().toISOString()}`);
+    const startFindExisting = Date.now();
+    const existingGrades = await this.gradeRepository.findByBlockIdAndEvaluationIds(
+      blockId, 
+      evaluationIds
+    );
+    console.log(`[Grades Service] Se encontraron ${existingGrades.length} calificaciones existentes - ${Date.now() - startFindExisting}ms`);
+    
+    // Crear un mapa para acceso rápido a las calificaciones existentes
+    const existingGradesMap = new Map<string, Grade>();
+    existingGrades.forEach(grade => {
+      const key = `${grade.evaluationId}-${grade.enrollmentId}`;
+      existingGradesMap.set(key, grade);
+    });
+    
+    // Preparar las calificaciones para la operación masiva
+    blockGradeDto.studentGrades.forEach(student => {
+      student.gradeRecords.forEach(gradeRecord => {
+        const key = `${gradeRecord.evaluationId}-${student.enrollmentId}`;
+        const existingGrade = existingGradesMap.get(key);
+        
+        // Agregar a la lista para procesamiento masivo
+        gradesToProcess.push({
+          id: existingGrade?.id, // Si existe, incluir el ID para actualizar
+          enrollmentId: student.enrollmentId,
+          evaluationId: gradeRecord.evaluationId,
+          score: gradeRecord.score
+        });
+      });
+    });
+    
+    // 6. Procesar todas las calificaciones en una transacción
+    console.log(`[Grades Service] Procesando ${gradesToProcess.length} calificaciones en transacción - ${new Date().toISOString()}`);
+    const startBulkProcess = Date.now();
+    const gradeResults = await this.gradeRepository.createOrUpdateMany(gradesToProcess);
+    console.log(`[Grades Service] Procesamiento masivo completado en ${Date.now() - startBulkProcess}ms`);
+    
+    // 7. Calcular promedios y actualizar - OPTIMIZADO EN PARALELO
+    console.log(`[Grades Service] Calculando promedios en paralelo - ${new Date().toISOString()}`);
+    const startCalcAvg = Date.now();
+    
+    // Obtener el courseOfferingId para calcular el promedio del curso
+    const courseOfferingId = block.courseOfferingId;
+    
+    // Cachés para los promedios calculados
+    const blockAverageCache = new Map<string, number>();
+    const courseAverageCache = new Map<string, number>();
+    
+    // Procesar todos los estudiantes en paralelo
+    const averagePromises = enrollmentIds.map(async (enrollmentId) => {
       // Calcular el promedio del bloque para este estudiante
       const blockAverage = await this.gradeRepository.calculateBlockAverage(
-        blockGradeDto.blockId,
-        student.enrollmentId
+        blockId,
+        enrollmentId
       );
+      blockAverageCache.set(enrollmentId, blockAverage);
       
       // Actualizar el promedio en la tabla enrollment_blocks
       await this.enrollmentBlockService.update(
-        student.enrollmentId,
-        blockGradeDto.blockId,
+        enrollmentId,
+        blockId,
         { blockAverage }
       );
-      
-      // Obtener el courseOfferingId para calcular el promedio del curso
-      const courseOfferingId = block.courseOfferingId;
       
       // Calcular el promedio del curso para este estudiante
       const courseAverage = await this.gradeRepository.calculateCourseAverage(
         courseOfferingId,
-        student.enrollmentId
+        enrollmentId
       );
+      courseAverageCache.set(enrollmentId, courseAverage);
       
       // Actualizar el promedio final en la tabla enrollment
       await this.enrollmentService.update(
-        student.enrollmentId,
+        enrollmentId,
         { finalAverage: courseAverage }
       );
       
-      // Guardar los promedios calculados para incluirlos en la respuesta
-      studentAverages.push({
-        enrollmentId: student.enrollmentId,
+      // Retornar los promedios calculados para incluirlos en la respuesta
+      return {
+        enrollmentId,
         blockAverage,
         courseAverage
-      });
-    }
+      };
+    });
     
-    // 6. Preparar información del bloque para la respuesta
+    // Esperar a que se completen todos los cálculos en paralelo
+    const studentAverages = await Promise.all(averagePromises);
+    
+    console.log(`[Grades Service] Cálculo de promedios completado en ${Date.now() - startCalcAvg}ms`);
+    
+    // 8. Preparar información del bloque para la respuesta
     let blockInfo = `Bloque: ${block.type}`;
     if (block.group) {
       blockInfo += ` - Grupo ${block.group}`;
     }
     
-    // 7. Construir la respuesta con la información de las calificaciones y promedios
+    // 9. Construir la respuesta con la información de las calificaciones y promedios
+    console.log(`[Grades Service] Procesamiento finalizado - ${new Date().toISOString()}`);
     return {
       grades: gradeResults,
       totalProcessed: gradeResults.length,

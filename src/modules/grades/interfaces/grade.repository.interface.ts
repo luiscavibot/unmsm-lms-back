@@ -15,4 +15,15 @@ export interface IGradeRepository {
   findByBlockIdAndEnrollmentId(blockId: string, enrollmentId: string): Promise<Grade[]>;
   calculateBlockAverage(blockId: string, enrollmentId: string): Promise<number>;
   calculateCourseAverage(courseOfferingId: string, enrollmentId: string): Promise<number>;
+  createOrUpdateMany(
+    grades: {
+      enrollmentId: string;
+      evaluationId: string;
+      score: number;
+      id?: string;
+    }[]
+  ): Promise<Grade[]>;
+  withTransaction<T>(
+    runInTransaction: (entityManager: any) => Promise<T>
+  ): Promise<T>;
 }
