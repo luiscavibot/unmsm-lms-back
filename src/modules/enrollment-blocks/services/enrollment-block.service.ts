@@ -195,18 +195,22 @@ export class EnrollmentBlockService {
           const timeWindow = AttendanceTimeValidator.getTimeWindow(classSession);
           result.canEditAttendance = timeWindow.isWithinValidPeriod;
           result.attendanceStatusMessage = timeWindow.statusMessage;
+          result.messageType = timeWindow.messageType;
         } else {
           result.canEditAttendance = false;
           result.attendanceStatusMessage = 'No se encontró la sesión de clase relacionada';
+          result.messageType = 'error';
         }
       } catch (error) {
         result.canEditAttendance = false;
         result.attendanceStatusMessage = 'Error al verificar el estado de la edición de asistencia';
+        result.messageType = 'error';
         console.error('Error al verificar el estado de la edición de asistencia:', error);
       }
     } else {
       result.canEditAttendance = false;
       result.attendanceStatusMessage = 'No hay sesión de clase asociada para registrar asistencia';
+      result.messageType = 'warning';
     }
     
     return result;

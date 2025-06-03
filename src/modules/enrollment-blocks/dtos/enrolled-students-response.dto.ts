@@ -64,6 +64,14 @@ export class EnrolledStudentsResponseDto {
   attendanceStatusMessage: string | null;
 
   @ApiProperty({
+    description: 'Tipo de mensaje para la interfaz de usuario (error, warning, info, success)',
+    example: 'success',
+    nullable: true,
+    enum: ['error', 'warning', 'info', 'success'],
+  })
+  messageType: string | null;
+
+  @ApiProperty({
     description: 'Lista de estudiantes matriculados',
     type: [EnrolledStudentDto],
   })

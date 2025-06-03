@@ -8,6 +8,7 @@ export interface AttendanceTimeWindow {
   classEndTime: string;
   isWithinValidPeriod: boolean;
   statusMessage: string;
+  messageType: 'error' | 'warning' | 'info' | 'success';
 }
 
 export class AttendanceTimeValidator {
@@ -98,22 +99,29 @@ export class AttendanceTimeValidator {
                                now.getMonth() === sessionDate.getMonth() &&
                                now.getFullYear() === sessionDate.getFullYear();
     
-    // Crear mensaje de estado
+    // Crear mensaje de estado y tipo de mensaje
     let statusMessage: string;
+    let messageType: 'error' | 'warning' | 'info' | 'success';
+    
     if (now < registrationStart) {
       const formattedTime = registrationStart.toLocaleTimeString('es-ES', {
         hour: '2-digit',
         minute: '2-digit'
       });
       statusMessage = `El registro de asistencia se habilitará a las ${formattedTime} hrs el día de la clase seleccionada.`;
+      messageType = 'info';
     } else if (now <= sessionStart) {
-      statusMessage = 'Puede registrar asistencia ahora (antes del inicio de la clase)';
+      statusMessage = 'Registro habilitado: Puede proceder con el ingreso de la asistencia de sus alumnos.';
+      messageType = 'success';
     } else if (now <= sessionEnd) {
-      statusMessage = 'Puede registrar asistencia ahora (durante la clase)';
+      statusMessage = 'Registro habilitado: Puede proceder con el ingreso de la asistencia de sus alumnos.';
+      messageType = 'success';
     } else if (now <= registrationEnd) {
       statusMessage = 'Puede registrar asistencia hasta las 23:59 de hoy';
+      messageType = 'warning';
     } else {
       statusMessage = 'El período para registrar asistencia ha finalizado';
+      messageType = 'error';
     }
     
     return {
@@ -122,7 +130,8 @@ export class AttendanceTimeValidator {
       classStartTime: `${startHours.toString().padStart(2, '0')}:${startMinutes.toString().padStart(2, '0')}`,
       classEndTime: `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`,
       isWithinValidPeriod,
-      statusMessage
+      statusMessage,
+      messageType
     };
   }
 }

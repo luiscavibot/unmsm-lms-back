@@ -42,6 +42,7 @@ export class FindEnrolledStudentsQuery {
       studentNumber: 0,
       canEditAttendance: false,
       attendanceStatusMessage: null,
+      messageType: null,
       students: [],
     };
 
@@ -145,6 +146,7 @@ export class FindEnrolledStudentsQuery {
         result.attendanceStatusMessage = `No hay sesiones de clase programadas para la fecha solicitada`;
       }
       
+      result.messageType = 'info'; // Añadimos tipo de mensaje informativo
       result.studentNumber = enrollmentIds.length; // Solo indicamos cuántos estudiantes hay matriculados
       return result; // Retornamos sin cargar la lista de estudiantes
     }
