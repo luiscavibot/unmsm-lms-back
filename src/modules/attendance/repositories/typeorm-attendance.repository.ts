@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository, EntityManager, DataSource } from 'typeorm';
 import { Attendance } from '../entities/attendance.entity';
 import { IAttendanceRepository } from '../interfaces/attendance.repository.interface';
 import { AttendanceByWeekResponseDto, WeekAttendanceDto } from '../dtos/attendance-by-week-response.dto';
@@ -10,6 +10,7 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
   constructor(
     @InjectRepository(Attendance)
     private readonly attendanceRepository: Repository<Attendance>,
+    private readonly dataSource: DataSource
   ) {}
 
   async create(attendance: Attendance): Promise<Attendance> {
@@ -44,6 +45,83 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
         enrollmentId,
         classSessionId
       }
+    });
+  }
+
+  async withTransaction<T>(
+    runInTransaction: (entityManager: EntityManager) => Promise<T>
+  ): Promise<T> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    
+    try {
+      const result = await runInTransaction(queryRunner.manager);
+      await queryRunner.commitTransaction();
+      return result;
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async findManyByClassSessionAndEnrollments(
+    classSessionId: string, 
+    enrollmentIds: string[]
+  ): Promise<Map<string, Attendance>> {
+    // Optimización: solo hacer la consulta si hay enrollmentIds
+    if (!enrollmentIds.length) {
+      return new Map<string, Attendance>();
+    }
+    
+    const attendances = await this.attendanceRepository.find({
+      where: {
+        classSessionId,
+        enrollmentId: In(enrollmentIds) // Usar In de TypeORM
+      }
+    });
+    
+    // Crear un mapa indexado por enrollmentId para acceso rápido
+    const attendanceMap = new Map<string, Attendance>();
+    for (const attendance of attendances) {
+      attendanceMap.set(attendance.enrollmentId, attendance);
+    }
+    
+    return attendanceMap;
+  }
+  
+  async createOrUpdateMany(
+    attendances: {
+      enrollmentId: string;
+      classSessionId: string;
+      status: string;
+      id?: string;
+      attendanceDate?: Date;
+    }[]
+  ): Promise<Attendance[]> {
+    // Si no hay registros para guardar, retornar un array vacío
+    if (!attendances.length) {
+      return [];
+    }
+    
+    // Ejecutar en una transacción para garantizar atomicidad
+    return await this.withTransaction(async (entityManager) => {
+      // Convertir los objetos planos a entidades Attendance
+      const attendanceEntities = attendances.map(attendance => {
+        const entity = new Attendance();
+        if (attendance.id) entity.id = attendance.id;
+        entity.enrollmentId = attendance.enrollmentId;
+        entity.classSessionId = attendance.classSessionId;
+        entity.status = attendance.status as any; // Necesario para el enum
+        entity.attendanceDate = attendance.attendanceDate || new Date();
+        return entity;
+      });
+      
+      // Usar el entityManager proporcionado por la transacción
+      return await entityManager.save(Attendance, attendanceEntities);
     });
   }
 

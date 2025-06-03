@@ -40,6 +40,8 @@ export class FindEnrolledStudentsQuery {
       date: null,
       classSessionId: null,
       studentNumber: 0,
+      canEditAttendance: false,
+      attendanceStatusMessage: null,
       students: [],
     };
 
@@ -66,14 +68,29 @@ export class FindEnrolledStudentsQuery {
     let classSessions: { id: string; sessionDate: Date }[] = [];
 
     if (date) {
-      // Si se proporciona una fecha, buscar sesiones en esa fecha
-      classSessions = await this.classSessionRepository
-        .createQueryBuilder('classSession')
-        .select(['classSession.id', 'classSession.sessionDate'])
-        .where('classSession.blockId = :blockId', { blockId })
-        .andWhere('DATE(classSession.sessionDate) = DATE(:date)', { date })
-        .orderBy('classSession.sessionDate', 'ASC')
-        .getMany();
+      try {
+        // Asegurarse de que date sea un objeto Date válido
+        const validDate = date instanceof Date && !isNaN(date.getTime()) 
+          ? date 
+          : new Date(date);
+        
+        // Formatear la fecha para asegurar consistencia en la comparación
+        const formattedDate = validDate.toISOString().split('T')[0];
+        
+        // Si se proporciona una fecha, buscar sesiones en esa fecha
+        classSessions = await this.classSessionRepository
+          .createQueryBuilder('classSession')
+          .select(['classSession.id', 'classSession.sessionDate'])
+          .where('classSession.blockId = :blockId', { blockId })
+          .andWhere('DATE(classSession.sessionDate) = DATE(:date)', { date: formattedDate })
+          .orderBy('classSession.sessionDate', 'ASC')
+          .getMany();
+        
+      } catch (error) {
+        console.error('Error al procesar la fecha para la consulta:', error);
+        // En caso de error, no filtrar por fecha
+        classSessions = [];
+      }
     } else {
       // Si no se proporciona fecha, buscar la sesión más cercana a la fecha actual
       const now = new Date();
@@ -102,11 +119,30 @@ export class FindEnrolledStudentsQuery {
       }
     }
 
-    // Si no hay sesiones, simplemente devolvemos los estudiantes sin asistencia
+    // Si no hay sesiones, devolvemos respuesta sin cargar estudiantes
     const classSessionId = classSessions.length > 0 ? classSessions[0].id : null;
     
     // Agregar el ID de la sesión de clase a los metadatos
     result.classSessionId = classSessionId;
+
+    // Si no se encontraron sesiones para la fecha proporcionada explícitamente, retornar sin estudiantes
+    if (date && !classSessionId) {
+      try {
+        // Formatear la fecha para el mensaje
+        const formattedDate = date instanceof Date 
+          ? date.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
+          : new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        
+        // Actualizar mensaje para indicar que no hay clases en la fecha solicitada
+        result.attendanceStatusMessage = `No hay sesiones de clase programadas para el ${formattedDate}`;
+      } catch (e) {
+        // Si hay error al formatear la fecha, usar mensaje genérico
+        result.attendanceStatusMessage = `No hay sesiones de clase programadas para la fecha solicitada`;
+      }
+      
+      result.studentNumber = enrollmentIds.length; // Solo indicamos cuántos estudiantes hay matriculados
+      return result; // Retornamos sin cargar la lista de estudiantes
+    }
 
     // Guardar la fecha de la sesión para incluirla en los metadatos
     if (classSessions.length > 0 && classSessions[0].sessionDate) {

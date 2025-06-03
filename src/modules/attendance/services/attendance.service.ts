@@ -12,6 +12,7 @@ import { BulkAttendanceDto } from '../dtos/bulk-attendance.dto';
 import { BulkAttendanceResponseDto } from '../dtos/bulk-attendance-response.dto';
 import { BlockAssignmentService } from '../../block-assignments/services/block-assignment.service';
 import { BlockRolType } from '../../block-assignments/enums/block-rol-type.enum';
+import { AttendanceTimeValidator } from '../utils/attendance-time-validator';
 
 @Injectable()
 export class AttendanceService {
@@ -68,89 +69,107 @@ export class AttendanceService {
    * @param bulkAttendanceDto DTO con la información de asistencias
    * @param userId ID del usuario que registra la asistencia
    * @param rolName Rol del usuario que registra la asistencia
+   * @returns Información de las asistencias procesadas
    */
   async registerBulkAttendance(bulkAttendanceDto: BulkAttendanceDto, userId: string, rolName: string | null): Promise<BulkAttendanceResponseDto> {
-    // 1. Validar la sesión de clase
-    const classSession = await this.classSessionService.findOne(bulkAttendanceDto.classSessionId);
-    
-    if (!classSession) {
-      throw new NotFoundException(`Sesión de clase con ID ${bulkAttendanceDto.classSessionId} no encontrada`);
-    }
-    
-    // 2. Validar permisos del usuario (solo profesores asignados al bloque pueden registrar asistencia)
-    if (rolName !== 'TEACHER') {
-      throw new ForbiddenException('Solo los profesores pueden registrar asistencia');
-    }
-    
-    const blockAssignments = await this.blockAssignmentService.findByBlockId(classSession.blockId);
-    
-    const isTeacherAssigned = blockAssignments.some(
-      assignment => assignment.userId === userId
-    );
-    
-    const isResponsible = blockAssignments.some(
-      assignment => assignment.userId === userId && assignment.blockRol === BlockRolType.RESPONSIBLE
-    );
-    
-    if (!isTeacherAssigned && !isResponsible) {
-      throw new ForbiddenException('No tiene permisos para registrar asistencia en este bloque');
-    }
-    
-    // 3. Procesar cada registro de asistencia
-    const attendanceResults: Attendance[] = [];
-    
-    for (const record of bulkAttendanceDto.attendanceRecords) {
-      // Validar que el estudiante está matriculado en el bloque
-      await this.enrollmentService.findOne(record.enrollmentId);
+    try {
+      // 1. Validar la sesión de clase
+      const classSession = await this.classSessionService.findOne(bulkAttendanceDto.classSessionId);
       
-      // Buscar si ya existe un registro de asistencia para este estudiante en esta sesión
-      const existingAttendance = await this.attendanceRepository.findByEnrollmentAndSession(
-        record.enrollmentId,
-        bulkAttendanceDto.classSessionId
+      if (!classSession) {
+        throw new NotFoundException(`Sesión de clase con ID ${bulkAttendanceDto.classSessionId} no encontrada`);
+      }
+      
+      // Validar que el registro de asistencia esté dentro del horario permitido
+      // Solo se permite registrar desde 10 minutos antes de la clase hasta el final del día
+      AttendanceTimeValidator.validate(classSession);
+      
+      // 2. Validar permisos del usuario (solo profesores asignados al bloque pueden registrar asistencia)
+      if (rolName !== 'TEACHER') {
+        throw new ForbiddenException('Solo los profesores pueden registrar asistencia');
+      }
+      
+      const blockAssignments = await this.blockAssignmentService.findByBlockId(classSession.blockId);
+      
+      const isTeacherAssigned = blockAssignments.some(
+        assignment => assignment.userId === userId
       );
       
-      let attendance: Attendance;
+      const isResponsible = blockAssignments.some(
+        assignment => assignment.userId === userId && assignment.blockRol === BlockRolType.RESPONSIBLE
+      );
       
-      if (existingAttendance) {
-        // Actualizar registro existente
-        attendance = await this.attendanceRepository.update(
-          existingAttendance.id,
-          { status: record.status }
-        ) as Attendance;
-      } else {
-        // Crear nuevo registro
-        attendance = await this.attendanceRepository.create({
-          enrollmentId: record.enrollmentId,
-          classSessionId: bulkAttendanceDto.classSessionId,
-          status: record.status,
-          attendanceDate: new Date()
-        } as Attendance);
+      if (!isTeacherAssigned && !isResponsible) {
+        throw new ForbiddenException('No tiene permisos para registrar asistencia en este bloque');
       }
       
-      attendanceResults.push(attendance);
+      // 3. Procesar los registros de asistencia en lote dentro de una transacción
+      return await this.attendanceRepository.withTransaction(async () => {
+        // Extraer IDs de matrícula de los registros
+        const enrollmentIds = bulkAttendanceDto.attendanceRecords.map(record => record.enrollmentId);
+        
+        // Validar que hay registros para procesar
+        if (enrollmentIds.length === 0) {
+          throw new BadRequestException('No se han proporcionado registros de asistencia');
+        }
+        
+        // Obtener registros de asistencia existentes para esta sesión y estos estudiantes (en una sola consulta)
+        const existingAttendances = await this.attendanceRepository.findManyByClassSessionAndEnrollments(
+          bulkAttendanceDto.classSessionId,
+          enrollmentIds
+        );
+        
+        // Preparar los datos para la operación de lote
+        const attendancesToSave = bulkAttendanceDto.attendanceRecords.map(record => {
+          const existingAttendance = existingAttendances.get(record.enrollmentId);
+          
+          if (existingAttendance) {
+            // Si existe, actualizamos el estado manteniendo el ID
+            return {
+              id: existingAttendance.id,
+              enrollmentId: record.enrollmentId,
+              classSessionId: bulkAttendanceDto.classSessionId,
+              status: record.status,
+              attendanceDate: existingAttendance.attendanceDate
+            };
+          } else {
+            // Si no existe, creamos un nuevo registro
+            return {
+              enrollmentId: record.enrollmentId,
+              classSessionId: bulkAttendanceDto.classSessionId,
+              status: record.status,
+              attendanceDate: new Date()
+            };
+          }
+        });
+        
+        // Crear o actualizar todos los registros en una sola operación
+        const attendanceResults = await this.attendanceRepository.createOrUpdateMany(attendancesToSave);
+        
+        // Formatear la fecha de la sesión para la respuesta
+        let sessionInfo = 'Sesión de clase';
+        if (classSession.sessionDate) {
+          const sessionDate = new Date(classSession.sessionDate);
+          try {
+            sessionInfo = `Sesión del ${sessionDate.toLocaleDateString('es-ES', {
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric'
+            })}`;
+          } catch (e) {
+            // Si hay un error al formatear la fecha, usar un formato simple
+            sessionInfo = `Sesión del ${sessionDate.toISOString().split('T')[0]}`;
+          }
+        }
+        
+        return {
+          attendances: attendanceResults,
+          totalProcessed: attendanceResults.length,
+          sessionInfo
+        };
+      });
+    } catch (error) {
+      throw error;
     }
-    
-    // Formatear la fecha de la sesión para la respuesta
-    let sessionInfo = 'Sesión de clase';
-    if (classSession.sessionDate) {
-      const sessionDate = new Date(classSession.sessionDate);
-      try {
-        sessionInfo = `Sesión del ${sessionDate.toLocaleDateString('es-ES', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric'
-        })}`;
-      } catch (e) {
-        // Si hay un error al formatear la fecha, usar un formato simple
-        sessionInfo = `Sesión del ${sessionDate.toISOString().split('T')[0]}`;
-      }
-    }
-    
-    // Construir la respuesta
-    return {
-      attendances: attendanceResults,
-      totalProcessed: attendanceResults.length,
-      sessionInfo
-    };
   }
 }

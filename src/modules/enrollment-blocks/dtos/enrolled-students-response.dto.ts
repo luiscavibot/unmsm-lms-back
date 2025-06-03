@@ -51,6 +51,19 @@ export class EnrolledStudentsResponseDto {
   studentNumber: number;
 
   @ApiProperty({
+    description: 'Indica si la asistencia puede ser editada actualmente',
+    example: true,
+  })
+  canEditAttendance: boolean;
+
+  @ApiProperty({
+    description: 'Mensaje informativo sobre el estado de la edición de asistencia',
+    example: 'Puede registrar asistencia hasta las 23:59 de hoy',
+    nullable: true,
+  })
+  attendanceStatusMessage: string | null;
+
+  @ApiProperty({
     description: 'Lista de estudiantes matriculados',
     type: [EnrolledStudentDto],
   })

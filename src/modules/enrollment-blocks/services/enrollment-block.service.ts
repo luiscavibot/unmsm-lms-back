@@ -13,6 +13,8 @@ import { EnrollmentPermissionResult, EnrollmentAccessType } from '../dtos/enroll
 import { BlockRolType } from 'src/modules/block-assignments/enums/block-rol-type.enum';
 import { FindEnrolledStudentsGradesQuery } from '../queries/find-enrolled-students-grades.query';
 import { EnrolledStudentsGradesResponseDto } from '../dtos/enrolled-students-grades-response.dto';
+import { AttendanceTimeValidator } from 'src/modules/attendance/utils/attendance-time-validator';
+import { ClassSessionService } from 'src/modules/class-sessions/services/class-session.service';
 
 @Injectable()
 export class EnrollmentBlockService {
@@ -24,6 +26,7 @@ export class EnrollmentBlockService {
     private readonly findEnrolledStudentsQuery: FindEnrolledStudentsQuery,
     private readonly blockAssignmentService: BlockAssignmentService,
     private readonly findEnrolledStudentsGradesQuery: FindEnrolledStudentsGradesQuery,
+    private readonly classSessionService: ClassSessionService,
   ) {}
 
   async create(createEnrollmentBlockDto: CreateEnrollmentBlockDto): Promise<EnrollmentBlock> {
@@ -180,7 +183,33 @@ export class EnrollmentBlockService {
     }
     
     // Usar el query object para obtener los estudiantes matriculados
-    return await this.findEnrolledStudentsQuery.execute(blockId, date);
+    const result = await this.findEnrolledStudentsQuery.execute(blockId, date);
+    
+    // Verificar si la asistencia puede ser editada (solo si hay una sesión de clase disponible)
+    if (result.classSessionId) {
+      try {
+        // Buscar la sesión de clase relacionada
+        const classSession = await this.classSessionService.findOne(result.classSessionId);
+        if (classSession) {
+          // Verificar si la asistencia puede ser editada según las reglas de tiempo
+          const timeWindow = AttendanceTimeValidator.getTimeWindow(classSession);
+          result.canEditAttendance = timeWindow.isWithinValidPeriod;
+          result.attendanceStatusMessage = timeWindow.statusMessage;
+        } else {
+          result.canEditAttendance = false;
+          result.attendanceStatusMessage = 'No se encontró la sesión de clase relacionada';
+        }
+      } catch (error) {
+        result.canEditAttendance = false;
+        result.attendanceStatusMessage = 'Error al verificar el estado de la edición de asistencia';
+        console.error('Error al verificar el estado de la edición de asistencia:', error);
+      }
+    } else {
+      result.canEditAttendance = false;
+      result.attendanceStatusMessage = 'No hay sesión de clase asociada para registrar asistencia';
+    }
+    
+    return result;
   }
 
   /**
