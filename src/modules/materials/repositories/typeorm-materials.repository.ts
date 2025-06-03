@@ -97,7 +97,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
         let materialUrl = item.materialUrl;
         if (item.materialType !== MaterialType.EXTERNAL_LINK && materialUrl) {
           const cdnUrl = this.config.get<string>('S3_CDN_URL') || this.config.get<string>('STORAGE_DOMAIN');
-          materialUrl = `${cdnUrl}${materialUrl}`;
+          materialUrl = `${cdnUrl}/${materialUrl}`;
         }
 
         // Para cada semana, verificar si este es el primer material (el más reciente)
