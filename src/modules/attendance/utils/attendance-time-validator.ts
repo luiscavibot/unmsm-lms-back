@@ -105,7 +105,7 @@ export class AttendanceTimeValidator {
         hour: '2-digit',
         minute: '2-digit'
       });
-      statusMessage = `El registro de asistencia estará disponible a partir de las ${formattedTime}`;
+      statusMessage = `El registro de asistencia se habilitará a las ${formattedTime} hrs el día de la clase seleccionada.`;
     } else if (now <= sessionStart) {
       statusMessage = 'Puede registrar asistencia ahora (antes del inicio de la clase)';
     } else if (now <= sessionEnd) {
