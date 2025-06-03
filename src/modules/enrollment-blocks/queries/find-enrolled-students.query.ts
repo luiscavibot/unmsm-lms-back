@@ -94,16 +94,21 @@ export class FindEnrolledStudentsQuery {
     } else {
       // Si no se proporciona fecha, buscar la sesión más cercana a la fecha actual
       const now = new Date();
+      const nowFormatted = now.toISOString().split('T')[0]; // Gets YYYY-MM-DD
+
+      console.log('now', now);
 
       // Primero, intentar encontrar la sesión más cercana en el futuro
       let futureSessions = await this.classSessionRepository
         .createQueryBuilder('classSession')
         .select(['classSession.id', 'classSession.sessionDate'])
         .where('classSession.blockId = :blockId', { blockId })
-        .andWhere('classSession.sessionDate >= :now', { now })
+        .andWhere('DATE(classSession.sessionDate) >= :now', { now: nowFormatted })
         .orderBy('classSession.sessionDate', 'ASC')
         .limit(1)
         .getMany();
+
+      console.log('futureSessions', futureSessions);
 
       // Si no hay sesiones futuras, buscar la más reciente en el pasado
       if (!futureSessions || futureSessions.length === 0) {
