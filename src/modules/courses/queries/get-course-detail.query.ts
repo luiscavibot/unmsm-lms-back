@@ -269,8 +269,10 @@ export class GetCourseDetailQuery {
 
   /**
    * Obtiene las sesiones de clase para un bloque en la semana actual
+   * @param blockId ID del bloque
+   * @param roleName Rol del usuario (STUDENT o TEACHER)
    */
-  private async getCurrentWeekSessions(blockId: string) {
+  private async getCurrentWeekSessions(blockId: string, roleName: string = UserRoles.STUDENT) {
     const now = new Date();
     
     // Obtener el primer día de la semana (lunes)
@@ -283,23 +285,48 @@ export class GetCourseDetailQuery {
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(11, 59, 59, 999);
 
-    return await this.blockAssignmentRepository
-      .createQueryBuilder('blockAssignment')
-      .select('classSession.id', 'id')
-      .addSelect('classSession.sessionDate', 'sessionDate')
-      .addSelect('classSession.startTime', 'startTime')
-      .addSelect('classSession.endTime', 'endTime')
-      .addSelect('classSession.virtualRoomUrl', 'virtualRoomUrl')
-      .innerJoin('blockAssignment.block', 'block')
-      .innerJoin('class_sessions', 'classSession', 'classSession.blockId = block.id')
-      .where('blockAssignment.blockId = :blockId', { blockId })
-      .andWhere('classSession.sessionDate BETWEEN :startDate AND :endDate', {
-        startDate: startOfWeek.toISOString().split('T')[0],
-        endDate: endOfWeek.toISOString().split('T')[0],
-      })
-      .orderBy('classSession.sessionDate', 'ASC')
-      .addOrderBy('classSession.startTime', 'ASC')
-      .getRawMany();
+    // Configurar fechas para el filtro
+    const dateFilter = {
+      startDate: startOfWeek.toISOString().split('T')[0],
+      endDate: endOfWeek.toISOString().split('T')[0],
+    };
+
+    // Usar la tabla adecuada según el rol del usuario
+    if (roleName === UserRoles.TEACHER) {
+      // Para profesores usamos blockAssignmentRepository
+      return await this.blockAssignmentRepository
+        .createQueryBuilder('blockAssignment')
+        .distinct(true)
+        .select('classSession.id', 'id')
+        .addSelect('classSession.sessionDate', 'sessionDate')
+        .addSelect('classSession.startTime', 'startTime')
+        .addSelect('classSession.endTime', 'endTime')
+        .addSelect('classSession.virtualRoomUrl', 'virtualRoomUrl')
+        .innerJoin('blockAssignment.block', 'block')
+        .innerJoin('class_sessions', 'classSession', 'classSession.blockId = block.id')
+        .where('blockAssignment.blockId = :blockId', { blockId })
+        .andWhere('classSession.sessionDate BETWEEN :startDate AND :endDate', dateFilter)
+        .orderBy('classSession.sessionDate', 'ASC')
+        .addOrderBy('classSession.startTime', 'ASC')
+        .getRawMany();
+    } else {
+      // Para estudiantes usamos enrollmentBlockRepository
+      return await this.enrollmentBlockRepository
+        .createQueryBuilder('enrollmentBlock')
+        .distinct(true)
+        .select('classSession.id', 'id')
+        .addSelect('classSession.sessionDate', 'sessionDate')
+        .addSelect('classSession.startTime', 'startTime')
+        .addSelect('classSession.endTime', 'endTime')
+        .addSelect('classSession.virtualRoomUrl', 'virtualRoomUrl')
+        .innerJoin('blocks', 'block', 'block.id = enrollmentBlock.blockId')
+        .innerJoin('class_sessions', 'classSession', 'classSession.blockId = block.id')
+        .where('enrollmentBlock.blockId = :blockId', { blockId })
+        .andWhere('classSession.sessionDate BETWEEN :startDate AND :endDate', dateFilter)
+        .orderBy('classSession.sessionDate', 'ASC')
+        .addOrderBy('classSession.startTime', 'ASC')
+        .getRawMany();
+    }
   }
 
   /**
@@ -337,7 +364,7 @@ export class GetCourseDetailQuery {
   /**
    * Construye los detalles completos de un bloque
    */
-  private async buildBlockDetails(block: any, courseOfferingId: string, responsibleTeacher: User | null) {
+  private async buildBlockDetails(block: any, courseOfferingId: string, responsibleTeacher: User | null, roleName: string = UserRoles.STUDENT) {
     // Obtener información del profesor del bloque
     const { blockTeacherName, teacherCvUrl, teacherCvUpdateDate } = await this.getBlockTeacherInfo(
       block.blockId, 
@@ -346,7 +373,7 @@ export class GetCourseDetailQuery {
     );
 
     // Obtener sesiones de clase de la semana actual
-    const classSessions = await this.getCurrentWeekSessions(block.blockId);
+    const classSessions = await this.getCurrentWeekSessions(block.blockId, roleName);
 
     // Formatear los horarios
     const schedules = this.formatSchedules(classSessions);
@@ -455,7 +482,7 @@ export class GetCourseDetailQuery {
     // Para cada bloque, obtener información detallada
     const blocksDetails = await Promise.all(
       blocksQuery.map(async (block) => {
-        return this.buildBlockDetails(block, courseOfferingId, responsibleTeacher);
+        return this.buildBlockDetails(block, courseOfferingId, responsibleTeacher, roleName);
       })
     );
 
