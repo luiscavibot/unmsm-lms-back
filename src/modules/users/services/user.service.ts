@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import {
   CognitoIdentityProviderClient,
   ListUsersCommand,
@@ -10,6 +10,8 @@ import {
   AdminCreateUserCommand,
   AdminAddUserToGroupCommand,
   AdminUpdateUserAttributesCommand,
+  AdminCreateUserCommandOutput,
+  AdminCreateUserCommandInput,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { ConfigService } from '@nestjs/config';
 import { User } from '../entities/user.entity';
@@ -90,77 +92,44 @@ export class UserService {
     return mapUserFromCognito(raw, groups);
   }
 
-  async create(dto: CreateUserDto): Promise<{
-    userId: string;
-    email: string;
-    roleName: string;
-    name: string;
-    password: string;
-  }> {
-    const { email, name, roleName } = dto;
+  async create(createUserDto: CreateUserDto): Promise<AdminCreateUserCommandOutput> {
     const userPoolId = this.config.get<string>('COGNITO_USER_POOL_ID');
-    let userId: string;
+    const { email, name, roleName } = createUserDto;
 
-    const tempPassword = generator.generate({
-      length: 12,
-      numbers: true,
-      uppercase: true,
-      lowercase: true,
-      symbols: false,
-    });
-
-    try {
-      await this.cognito.send(
-        new AdminCreateUserCommand({
-          UserPoolId: userPoolId,
-          Username: email,
-          TemporaryPassword: tempPassword,
-          MessageAction: 'SUPPRESS',
-          UserAttributes: [
-            { Name: 'email', Value: email },
-            { Name: 'email_verified', Value: 'true' },
-            { Name: 'name', Value: name },
-          ],
-        }),
-      );
-    } catch (err) {
-      console.error('Error creando usuario en Cognito:', err);
-      throw new InternalServerErrorException('No se pudo crear el usuario en Cognito', err);
-    }
+    const input: AdminCreateUserCommandInput = {
+      UserPoolId: userPoolId,
+      Username: email,
+      UserAttributes: [
+        { Name: 'email', Value: email },
+        { Name: 'email_verified', Value: 'true' },
+        { Name: 'name', Value: name },
+      ],
+      DesiredDeliveryMediums: ['EMAIL'],
+    };
 
     try {
-      const getUser = await this.cognito.send(
-        new AdminGetUserCommand({
-          UserPoolId: userPoolId,
-          Username: email,
-        }),
-      );
-      userId = getUser.Username!;
-    } catch (err) {
-      console.error('Error obteniendo el ID del usuario en Cognito:', err);
-      throw new InternalServerErrorException('No se pudo recuperar el ID del usuario', err);
-    }
+      // 1) Crear usuario en Cognito
+      const createCmd = new AdminCreateUserCommand(input);
+      const response = await this.cognito.send(createCmd);
 
-    try {
-      await this.cognito.send(
-        new AdminAddUserToGroupCommand({
+      // 2) Asignar al grupo según roleName
+      if (roleName) {
+        const addGroupCmd = new AdminAddUserToGroupCommand({
           UserPoolId: userPoolId,
           Username: email,
           GroupName: roleName,
-        }),
-      );
-    } catch (err) {
-      console.error('Error asignando rol en Cognito:', err);
-      throw new InternalServerErrorException('No se pudo asignar el rol al usuario', err);
-    }
+        });
+        await this.cognito.send(addGroupCmd);
+      }
 
-    return {
-      userId,
-      email,
-      roleName,
-      name,
-      password: tempPassword,
-    };
+      return response;
+    } catch (error: any) {
+      console.error('Error creando usuario en Cognito:', error);
+      if (error.name === 'UsernameExistsException') {
+        throw new ConflictException('El usuario ya existe en Cognito');
+      }
+      throw new InternalServerErrorException('No se pudo crear usuario en Cognito');
+    }
   }
 
   async updateUserAttribute(userId: string, attributeName: string, attributeValue: string): Promise<boolean> {
@@ -188,7 +157,7 @@ export class UserService {
 
   getFileUrl(fileMetadata: FileMetadata | string): string {
     const cdnUrl = this.config.get<string>('S3_CDN_URL') || this.config.get<string>('STORAGE_DOMAIN') || '';
-    
+
     if (typeof fileMetadata === 'string') {
       // Si se proporciona directamente la ruta hasheada
       return `${cdnUrl}/${fileMetadata}`;
