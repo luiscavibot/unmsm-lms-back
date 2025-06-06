@@ -132,8 +132,15 @@ export class GetCourseDetailQuery {
    * @param roleName Rol del usuario (STUDENT o TEACHER)
    */
   private async getBasicBlocksInfo(courseOfferingId: string, userId?: string, roleName?: string) {
-    // Consulta base
-    let query = this.blockAssignmentRepository
+    // Usar consultas diferentes según el rol
+    if (roleName === UserRoles.TEACHER && userId) {
+      return await this.getTeacherBlocks(courseOfferingId, userId);
+    } else if (roleName === UserRoles.STUDENT && userId) {
+      return await this.getStudentBlocks(courseOfferingId, userId);
+    }
+    
+    // Si no hay rol o usuario específico, devolvemos todos los bloques del curso
+    const query = this.blockAssignmentRepository
       .createQueryBuilder('blockAssignment')
       .distinctOn(['block.id'])
       .select('block.id', 'blockId')
@@ -143,48 +150,75 @@ export class GetCourseDetailQuery {
       .addSelect('block.syllabusUrl', 'syllabusUrl')
       .innerJoin('blockAssignment.block', 'block')
       .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId });
-    
-    // Si es profesor, aplicamos filtros adicionales según su rol
-    if (roleName === UserRoles.TEACHER && userId) {
-      // Primero verificamos si es profesor responsable
-      const isResponsible = await this.blockAssignmentRepository.findOne({
-        where: {
-          userId,
-          courseOfferingId,
-          blockRol: BlockRolType.RESPONSIBLE
-        }
-      });
       
-      // Si no es responsable, mostramos los bloques donde está como colaborador y el bloque de teoría
-      if (!isResponsible) {
-        query.andWhere('(blockAssignment.userId = :userId OR block.type = :theoryType)', {
-          userId,
-          theoryType: BlockType.THEORY
-        });
-      }
-    }
-    // Si es estudiante, traemos solo los bloques asociados a su matrícula
-    else if (roleName === UserRoles.STUDENT && userId) {
-      // Primero encontramos la matrícula del estudiante para este curso
-      const enrollment = await this.enrollmentRepository.findOne({
-        where: {
-          userId,
-          courseOfferingId
-        }
-      });
+    return await query.getRawMany();
+  }
+  
+  /**
+   * Obtiene los bloques para un profesor
+   */
+  private async getTeacherBlocks(courseOfferingId: string, userId: string) {
+    // Para profesores usamos blockAssignmentRepository
+    const query = this.blockAssignmentRepository
+      .createQueryBuilder('blockAssignment')
+      .distinctOn(['block.id'])
+      .select('block.id', 'blockId')
+      .addSelect('block.type', 'type')
+      .addSelect('block.group', 'group')
+      .addSelect('block.classroomNumber', 'aula')
+      .addSelect('block.syllabusUrl', 'syllabusUrl')
+      .innerJoin('blockAssignment.block', 'block')
+      .where('blockAssignment.courseOfferingId = :courseOfferingId', { courseOfferingId });
       
-      if (enrollment) {
-        // Unimos con enrollment_blocks para filtrar solo los bloques asociados a la matrícula
-        query.innerJoin(
-          'enrollment_blocks',
-          'enrollmentBlock',
-          'enrollmentBlock.blockId = block.id AND enrollmentBlock.enrollmentId = :enrollmentId',
-          { enrollmentId: enrollment.id }
-        );
+    // Verificamos si es profesor responsable
+    const isResponsible = await this.blockAssignmentRepository.findOne({
+      where: {
+        userId,
+        courseOfferingId,
+        blockRol: BlockRolType.RESPONSIBLE
       }
+    });
+
+    // Si no es responsable, mostramos los bloques donde está como colaborador y el bloque de teoría
+    if (!isResponsible) {
+      query.andWhere('(blockAssignment.userId = :userId OR block.type = :theoryType)', {
+        userId,
+        theoryType: BlockType.THEORY
+      });
     }
     
     return await query.getRawMany();
+  }
+  
+  /**
+   * Obtiene los bloques para un estudiante
+   */
+  private async getStudentBlocks(courseOfferingId: string, userId: string) {
+    // Primero encontramos la matrícula del estudiante para este curso
+    const enrollment = await this.enrollmentRepository.findOne({
+      where: {
+        userId,
+        courseOfferingId
+      }
+    });
+
+    if (enrollment) {
+      // Para estudiantes usamos enrollmentBlockRepository como basee
+      const query = this.enrollmentBlockRepository
+        .createQueryBuilder('enrollmentBlock')
+        .distinctOn(['blocks.id'])
+        .select('blocks.id', 'blockId')
+        .addSelect('blocks.type', 'type')
+        .addSelect('blocks.group', 'group')
+        .addSelect('blocks.classroomNumber', 'aula')
+        .addSelect('blocks.syllabusUrl', 'syllabusUrl')
+        .innerJoin('blocks', 'blocks', 'blocks.id = enrollmentBlock.blockId')
+        .where('enrollmentBlock.enrollmentId = :enrollmentId', { enrollmentId: enrollment.id });
+        
+      return await query.getRawMany();
+    }
+    
+    return [];
   }
 
   /**
@@ -322,7 +356,7 @@ export class GetCourseDetailQuery {
 
     // Formatear nombre del bloque
     const blockTypeName = CourseUtils.blockTypeName(block.type);
-    const blockGroupName = block?.type === BlockType.PRACTICE ? ` - Grupo ${block.group}` : '';
+    const blockGroupName = block?.type === BlockType.PRACTICE && block.group !== null ? ` - Grupo ${block.group}` : '';
     const blockName = blockTypeName + blockGroupName;
 
     // Extraer nombres de archivo de las URLs
