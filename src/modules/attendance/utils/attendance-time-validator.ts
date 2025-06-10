@@ -20,35 +20,37 @@ export class AttendanceTimeValidator {
   static validate(classSession: ClassSession): void {
     const now = new Date();
     const timeWindow = this.getTimeWindow(classSession);
-    
+
     // Verificar si la hora actual está dentro del rango permitido
     if (now < timeWindow.registrationStartTime) {
       const formattedTime = timeWindow.registrationStartTime.toLocaleTimeString('es-ES', {
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
       throw new BadRequestException(
-        `Aún no puede registrar asistencia. El registro estará disponible a partir de las ${formattedTime}`
+        `Aún no puede registrar asistencia. El registro estará disponible a partir de las ${formattedTime}`,
       );
     }
-    
+
     if (now > timeWindow.registrationEndTime) {
       throw new BadRequestException(
-        'El período para registrar asistencia ha finalizado. Solo puede registrar asistencia hasta el final del día de la clase'
+        'El período para registrar asistencia ha finalizado. Solo puede registrar asistencia hasta el final del día de la clase',
       );
     }
-    
+
     // Verificar que la fecha actual corresponda al día de la clase
     const sessionDate = new Date(classSession.sessionDate);
-    if (now.getFullYear() !== sessionDate.getFullYear() || 
-        now.getMonth() !== sessionDate.getMonth() || 
-        now.getDate() !== sessionDate.getDate()) {
-      throw new BadRequestException(
-        'Solo puede registrar asistencia durante el día de la clase'
-      );
-    }
+    //********************************************* */
+    // if (
+    //   now.getFullYear() !== sessionDate.getFullYear() ||
+    //   now.getMonth() !== sessionDate.getMonth() ||
+    //   now.getDate() !== sessionDate.getDate()
+    // ) {
+    //   throw new BadRequestException('Solo puede registrar asistencia durante el día de la clase');
+    // }
+    /********************************************* */
   }
-  
+
   /**
    * Verifica si una sesión de clase puede ser editada en base al horario
    * No lanza excepción, solo retorna un booleano
@@ -63,7 +65,7 @@ export class AttendanceTimeValidator {
       return false;
     }
   }
-  
+
   /**
    * Obtiene la ventana de tiempo permitida para el registro de asistencia
    * @param classSession Sesión de clase
@@ -72,41 +74,45 @@ export class AttendanceTimeValidator {
   static getTimeWindow(classSession: ClassSession): AttendanceTimeWindow {
     const now = new Date();
     const sessionDate = new Date(classSession.sessionDate);
-    
+
     // Extraer horas y minutos del startTime y endTime (formato "HH:MM:SS")
     const [startHours, startMinutes] = classSession.startTime.split(':').map(Number);
     const [endHours, endMinutes] = classSession.endTime.split(':').map(Number);
-    
+
     // Crear objeto de fecha para el inicio y fin de la sesión
     const sessionStart = new Date(sessionDate);
     sessionStart.setHours(startHours, startMinutes, 0, 0);
-    
+
     const sessionEnd = new Date(sessionDate);
     sessionEnd.setHours(endHours, endMinutes, 0, 0);
-    
+
     // 10 minutos antes del inicio de la sesión
     const registrationStart = new Date(sessionStart);
     registrationStart.setMinutes(registrationStart.getMinutes() - 10);
-    
-    // Fin del día (23:59:59)
+
+    // Fin del día siguiente (23:59:59)
     const registrationEnd = new Date(sessionDate);
+    registrationEnd.setDate(registrationEnd.getDate() + 1);
     registrationEnd.setHours(23, 59, 59, 999);
-    
+
     // Determinar si está dentro del periodo válido
-    const isWithinValidPeriod = now >= registrationStart && 
-                               now <= registrationEnd && 
-                               now.getDate() === sessionDate.getDate() &&
-                               now.getMonth() === sessionDate.getMonth() &&
-                               now.getFullYear() === sessionDate.getFullYear();
-    
+    // const isWithinValidPeriod =
+    //   now >= registrationStart &&
+    //   now <= registrationEnd &&
+    //   now.getDate() === sessionDate.getDate() &&
+    //   now.getMonth() === sessionDate.getMonth() &&
+    //   now.getFullYear() === sessionDate.getFullYear();
+
+    const isWithinValidPeriod = now >= registrationStart && now <= registrationEnd;
+
     // Crear mensaje de estado y tipo de mensaje
     let statusMessage: string;
     let messageType: 'error' | 'warning' | 'info' | 'success';
-    
+
     if (now < registrationStart) {
       const formattedTime = registrationStart.toLocaleTimeString('es-ES', {
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
       statusMessage = `El registro de asistencia se habilitará a las ${formattedTime} hrs el día de la clase seleccionada.`;
       messageType = 'info';
@@ -123,7 +129,7 @@ export class AttendanceTimeValidator {
       statusMessage = 'El período para registrar asistencia ha finalizado';
       messageType = 'error';
     }
-    
+
     return {
       registrationStartTime: registrationStart,
       registrationEndTime: registrationEnd,
@@ -131,7 +137,7 @@ export class AttendanceTimeValidator {
       classEndTime: `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`,
       isWithinValidPeriod,
       statusMessage,
-      messageType
+      messageType,
     };
   }
 }
