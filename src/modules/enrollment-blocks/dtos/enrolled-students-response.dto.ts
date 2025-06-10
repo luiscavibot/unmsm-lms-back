@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { AttendanceStatus } from 'src/modules/attendance/enums/attendance-status.enum';
+import { AttendanceTimeWindow } from 'src/modules/attendance/utils/attendance-time-validator';
 
 export class EnrolledStudentDto {
   @ApiProperty({
@@ -76,4 +77,11 @@ export class EnrolledStudentsResponseDto {
     type: [EnrolledStudentDto],
   })
   students: EnrolledStudentDto[];
+
+  @ApiProperty({
+    description: 'Ventana de tiempos para el registro de asistencia',
+    nullable: true,
+    required: false,
+  })
+  timeWindow?: AttendanceTimeWindow | null;
 }

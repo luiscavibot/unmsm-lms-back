@@ -32,20 +32,22 @@ export class EnrollmentBlockService {
   async create(createEnrollmentBlockDto: CreateEnrollmentBlockDto): Promise<EnrollmentBlock> {
     // Verificar que la inscripción existe
     await this.enrollmentService.findOne(createEnrollmentBlockDto.enrollmentId);
-    
+
     // Verificar que el bloque existe
     await this.blockService.findById(createEnrollmentBlockDto.blockId);
-    
+
     // Verificar si ya existe esta relación
     const existingEnrollmentBlock = await this.enrollmentBlockRepository.findOne(
       createEnrollmentBlockDto.enrollmentId,
       createEnrollmentBlockDto.blockId,
     );
-    
+
     if (existingEnrollmentBlock) {
-      throw new Error(`Ya existe una relación entre la inscripción ${createEnrollmentBlockDto.enrollmentId} y el bloque ${createEnrollmentBlockDto.blockId}`);
+      throw new Error(
+        `Ya existe una relación entre la inscripción ${createEnrollmentBlockDto.enrollmentId} y el bloque ${createEnrollmentBlockDto.blockId}`,
+      );
     }
-    
+
     return await this.enrollmentBlockRepository.create(createEnrollmentBlockDto as EnrollmentBlock);
   }
 
@@ -56,7 +58,9 @@ export class EnrollmentBlockService {
   async findOne(enrollmentId: string, blockId: string): Promise<EnrollmentBlock> {
     const enrollmentBlock = await this.enrollmentBlockRepository.findOne(enrollmentId, blockId);
     if (!enrollmentBlock) {
-      throw new NotFoundException(`EnrollmentBlock con enrollmentId: ${enrollmentId} y blockId: ${blockId} no encontrado`);
+      throw new NotFoundException(
+        `EnrollmentBlock con enrollmentId: ${enrollmentId} y blockId: ${blockId} no encontrado`,
+      );
     }
     return enrollmentBlock;
   }
@@ -64,14 +68,14 @@ export class EnrollmentBlockService {
   async findByEnrollmentId(enrollmentId: string): Promise<EnrollmentBlock[]> {
     // Verificar que la inscripción existe
     await this.enrollmentService.findOne(enrollmentId);
-    
+
     return await this.enrollmentBlockRepository.findByEnrollmentId(enrollmentId);
   }
 
   async findByBlockId(blockId: string): Promise<EnrollmentBlock[]> {
     // Verificar que el bloque existe
     await this.blockService.findById(blockId);
-    
+
     return await this.enrollmentBlockRepository.findByBlockId(blockId);
   }
 
@@ -81,12 +85,8 @@ export class EnrollmentBlockService {
     updateEnrollmentBlockDto: UpdateEnrollmentBlockDto,
   ): Promise<EnrollmentBlock | null> {
     await this.findOne(enrollmentId, blockId);
-    
-    return await this.enrollmentBlockRepository.update(
-      enrollmentId,
-      blockId,
-      updateEnrollmentBlockDto,
-    );
+
+    return await this.enrollmentBlockRepository.update(enrollmentId, blockId, updateEnrollmentBlockDto);
   }
 
   async remove(enrollmentId: string, blockId: string): Promise<void> {
@@ -100,14 +100,18 @@ export class EnrollmentBlockService {
    * @param rolName Nombre del rol del usuario
    * @param blockId ID del bloque al que se intenta acceder
    */
-  async checkEnrollmentPermissions(userId: string, rolName: string | null, blockId: string): Promise<EnrollmentPermissionResult> {
+  async checkEnrollmentPermissions(
+    userId: string,
+    rolName: string | null,
+    blockId: string,
+  ): Promise<EnrollmentPermissionResult> {
     // 1. Validar que el usuario sea profesor
     const TEACHER_ROLE = 'TEACHER';
     if (rolName !== TEACHER_ROLE) {
       return {
         hasPermission: false,
         accessType: EnrollmentAccessType.NO_ACCESS,
-        message: 'Solo los profesores pueden acceder a la lista de estudiantes matriculados'
+        message: 'Solo los profesores pueden acceder a la lista de estudiantes matriculados',
       };
     }
 
@@ -123,35 +127,34 @@ export class EnrollmentBlockService {
       return {
         hasPermission: false,
         accessType: EnrollmentAccessType.NO_ACCESS,
-        message: 'No hay profesores asignados a este bloque'
+        message: 'No hay profesores asignados a este bloque',
       };
     }
 
     // 4. Buscar si el usuario actual está asignado a este bloque
-    const userAssignment = blockAssignments.find(assignment => assignment.userId === userId);
-    
+    const userAssignment = blockAssignments.find((assignment) => assignment.userId === userId);
+
     if (userAssignment) {
       return {
         hasPermission: true,
         accessType: EnrollmentAccessType.OWNER,
-        message: 'Usuario es colaborador/responsable de este bloque'
+        message: 'Usuario es colaborador/responsable de este bloque',
       };
     }
 
     // 5. Si el usuario no está asignado directamente, verificar si es responsable
     // de otro bloque del mismo courseOffering
-    const courseOfferingAssignments = 
-      await this.blockAssignmentService.findByCourseOfferingId(block.courseOfferingId);
-    
+    const courseOfferingAssignments = await this.blockAssignmentService.findByCourseOfferingId(block.courseOfferingId);
+
     const isResponsible = courseOfferingAssignments.some(
-      assignment => assignment.userId === userId && assignment.blockRol === BlockRolType.RESPONSIBLE
+      (assignment) => assignment.userId === userId && assignment.blockRol === BlockRolType.RESPONSIBLE,
     );
 
     if (isResponsible) {
       return {
         hasPermission: true,
         accessType: EnrollmentAccessType.RESPONSIBLE,
-        message: 'Usuario es responsable de la oferta de curso'
+        message: 'Usuario es responsable de la oferta de curso',
       };
     }
 
@@ -159,7 +162,7 @@ export class EnrollmentBlockService {
     return {
       hasPermission: false,
       accessType: EnrollmentAccessType.NO_ACCESS,
-      message: 'Usuario no tiene permisos para acceder a la lista de estudiantes de este bloque'
+      message: 'Usuario no tiene permisos para acceder a la lista de estudiantes de este bloque',
     };
   }
 
@@ -170,10 +173,15 @@ export class EnrollmentBlockService {
    * @param userId ID del usuario que realiza la solicitud
    * @param rolName Nombre del rol del usuario
    */
-  async findEnrolledStudents(blockId: string, date?: Date, userId?: string, rolName?: string | null): Promise<EnrolledStudentsResponseDto> {
+  async findEnrolledStudents(
+    blockId: string,
+    date?: Date,
+    userId?: string,
+    rolName?: string | null,
+  ): Promise<EnrolledStudentsResponseDto> {
     // Verificar que el bloque existe
     await this.blockService.findById(blockId);
-    
+
     // Si se proporciona un userId y rolName, verificar permisos
     if (userId && rolName !== undefined) {
       const permissionResult = await this.checkEnrollmentPermissions(userId, rolName, blockId);
@@ -181,10 +189,10 @@ export class EnrollmentBlockService {
         throw new ForbiddenException(permissionResult.message);
       }
     }
-    
+
     // Usar el query object para obtener los estudiantes matriculados
     const result = await this.findEnrolledStudentsQuery.execute(blockId, date);
-    
+
     // Verificar si la asistencia puede ser editada (solo si hay una sesión de clase disponible)
     if (result.classSessionId) {
       try {
@@ -196,6 +204,7 @@ export class EnrollmentBlockService {
           result.canEditAttendance = timeWindow.isWithinValidPeriod;
           result.attendanceStatusMessage = timeWindow.statusMessage;
           result.messageType = timeWindow.messageType;
+          result.timeWindow = timeWindow;
         } else {
           result.canEditAttendance = false;
           result.attendanceStatusMessage = 'No se encontró la sesión de clase relacionada';
@@ -212,7 +221,7 @@ export class EnrollmentBlockService {
       result.attendanceStatusMessage = 'No hay sesión de clase asociada para registrar asistencia';
       result.messageType = 'warning';
     }
-    
+
     return result;
   }
 
@@ -222,10 +231,14 @@ export class EnrollmentBlockService {
    * @param userId ID del usuario que realiza la solicitud
    * @param rolName Nombre del rol del usuario
    */
-  async findEnrolledStudentsGrades(blockId: string, userId?: string, rolName?: string | null): Promise<EnrolledStudentsGradesResponseDto> {
+  async findEnrolledStudentsGrades(
+    blockId: string,
+    userId?: string,
+    rolName?: string | null,
+  ): Promise<EnrolledStudentsGradesResponseDto> {
     // Verificar que el bloque existe
     await this.blockService.findById(blockId);
-    
+
     // Si se proporciona un userId y rolName, verificar permisos
     if (userId && rolName !== undefined) {
       const permissionResult = await this.checkEnrollmentPermissions(userId, rolName, blockId);
@@ -233,7 +246,7 @@ export class EnrollmentBlockService {
         throw new ForbiddenException(permissionResult.message);
       }
     }
-    
+
     // Usar el query object para obtener los estudiantes matriculados con sus notas
     return await this.findEnrolledStudentsGradesQuery.execute(blockId);
   }
