@@ -39,7 +39,7 @@ export class SemesterService {
   }
 
   async findByUserId(userId: string, roleName?: string): Promise<Semester[]> {
-    const currentYear = new Date().getFullYear();
+    const currentYear = new Date().getUTCFullYear();
     return await this.semesterRepository.findByUserId(userId, roleName, currentYear);
   }
 }

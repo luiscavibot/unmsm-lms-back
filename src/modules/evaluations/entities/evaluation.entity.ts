@@ -15,7 +15,7 @@ export class Evaluation {
   @Column({ length: 255, nullable: false })
   title: string;
 
-  @Column({ type: 'date', nullable: false })
+  @Column({ type: 'timestamp', nullable: false })
   evaluationDate: Date;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: false })

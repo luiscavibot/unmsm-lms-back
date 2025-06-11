@@ -96,7 +96,7 @@ export class FindCoursesByProgramTypeQuery {
       query.andWhere('courseOffering.semesterId = :semester', { semester });
     } else {
       // Si no se proporciona un semestre, filtrar por los últimos 2 años
-      const actualYear = new Date().getFullYear();
+      const actualYear = new Date().getUTCFullYear();
       const lastYear = actualYear - 1;
       query.andWhere('semester.year >= :lastYear AND semester.year <= :actualYear', {
         lastYear,

@@ -35,7 +35,7 @@ export class FindSemestersByUserIdQuery {
    * @returns Lista de semestres relacionados con el usuario
    */
   async execute(userId: string, roleName: string = UserRoles.STUDENT, currentYear?: number): Promise<Semester[]> {
-    const actualYear = currentYear || new Date().getFullYear();
+    const actualYear = currentYear || new Date().getUTCFullYear();
     const lastYear = actualYear - 1;
     
     // Bases para filtros de tiempo

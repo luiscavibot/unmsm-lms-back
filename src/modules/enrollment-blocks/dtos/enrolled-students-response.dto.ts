@@ -32,11 +32,18 @@ export class EnrolledStudentDto {
 
 export class EnrolledStudentsResponseDto {
   @ApiProperty({
-    description: 'Fecha de la sesión de asistencia (formato YYYY-MM-DD)',
-    example: '2025-05-27',
+    description: 'Fecha y hora de inicio de la sesión (formato ISO 8601)',
+    example: '2025-05-27T14:00:00Z',
     nullable: true,
   })
-  date: string | null;
+  startDateTime?: string | null;
+  
+  @ApiProperty({
+    description: 'Fecha y hora de fin de la sesión (formato ISO 8601)',
+    example: '2025-05-27T16:00:00Z',
+    nullable: true,
+  })
+  endDateTime?: string | null;
 
   @ApiProperty({
     description: 'ID de la sesión de clase de donde se obtiene la asistencia',

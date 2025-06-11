@@ -3,16 +3,16 @@ import { AttendanceStatus } from '../enums/attendance-status.enum';
 
 export class AttendanceDetailDto {
   @ApiProperty({
-    description: 'Fecha de la sesión en formato dd/mm/yyyy',
-    example: '17/05/2025'
+    description: 'Fecha de inicio de la sesión en formato ISO 8601 UTC',
+    example: '2025-05-17T14:00:00Z'
   })
-  date: string;
+  startDateTime: string;
 
   @ApiProperty({
-    description: 'Fecha de la sesión formateada (Día de la semana y fecha)',
-    example: 'Viernes 17/05/2025'
+    description: 'Fecha de fin de la sesión en formato ISO 8601 UTC',
+    example: '2025-05-17T16:00:00Z'
   })
-  formattedDate: string;
+  endDateTime: string;
 
   @ApiProperty({
     description: 'Estado de asistencia del estudiante',

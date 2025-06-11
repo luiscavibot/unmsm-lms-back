@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Headers } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { AttendanceService } from '../services/attendance.service';
 import { CreateAttendanceDto } from '../dtos/create-attendance.dto';
 import { UpdateAttendanceDto } from '../dtos/update-attendance.dto';
@@ -64,14 +64,21 @@ export class AttendanceController {
     status: 403,
     description: 'No tiene permisos para registrar asistencia en este bloque'
   })
+  @ApiHeader({
+    name: 'lms-timezone',
+    description: 'Zona horaria del usuario (ej. America/Lima, America/Bogota)',
+    required: false,
+  })
   async registerBulkAttendance(
     @Body() bulkAttendanceDto: BulkAttendanceDto,
-    @CurrentUserToken() user: UserPayload
+    @CurrentUserToken() user: UserPayload,
+    @Headers('lms-timezone') timezone?: string
   ): Promise<BulkAttendanceResponseDto> {
     return await this.attendanceService.registerBulkAttendance(
       bulkAttendanceDto,
       user.userId,
-      user.rolName
+      user.rolName,
+      timezone
     );
   }
 
@@ -87,10 +94,16 @@ export class AttendanceController {
     description: 'Asistencias agrupadas por semana',
     type: AttendanceByWeekResponseDto
   })
+  @ApiHeader({
+    name: 'lms-timezone',
+    description: 'Zona horaria del usuario (ej. America/Lima, America/Bogota)',
+    required: false,
+  })
   async findAttendancesByBlockId(
     @Param('id') id: string,
-    @CurrentUserToken() user: UserPayload
+    @CurrentUserToken() user: UserPayload,
+    @Headers('lms-timezone') timezone?: string
   ): Promise<AttendanceByWeekResponseDto> {
-    return await this.attendanceService.findAttendancesByBlockId(id, user.userId);
+    return await this.attendanceService.findAttendancesByBlockId(id, user.userId, timezone);
   }
 }

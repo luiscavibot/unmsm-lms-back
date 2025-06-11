@@ -144,12 +144,13 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
           'attendance.id',
           'attendance.status',
           'attendance.attendanceDate',
-          'classSession.sessionDate',
+          'classSession.startDateTime',
+          'classSession.endDateTime',
           'classSession.id',
           'week.id',
           'week.number',
         ])
-        .orderBy('classSession.sessionDate', 'ASC');
+        .orderBy('classSession.startDateTime', 'ASC');
 
       const attendances = await query.getMany();
 
@@ -176,11 +177,10 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
           const weekId = attendance.classSession?.week?.id;
           const weekNumber = attendance.classSession?.week?.number;
 
-          if (!weekId || weekNumber === undefined || !attendance.classSession?.sessionDate) {
+          if (!weekId || weekNumber === undefined || !attendance.classSession?.startDateTime) {
             continue; // Saltar este registro si falta información crucial
           }
 
-          const sessionDate = new Date(attendance.classSession.sessionDate);
           const weekName = `Semana ${weekNumber}`;
 
           if (!weekAttendancesMap.has(weekId)) {
@@ -192,31 +192,15 @@ export class TypeormAttendanceRepository implements IAttendanceRepository {
             });
           }
 
-          // Formatear fechas de manera segura
-          let dateStr = '';
-          let formattedDate = '';
-
-          try {
-            dateStr = sessionDate.toLocaleDateString('es-ES');
-            formattedDate = sessionDate.toLocaleDateString('es-ES', {
-              weekday: 'long',
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-            });
-          } catch (e) {
-            // En caso de error con el formato de fecha, usar un formato sencillo
-            dateStr = sessionDate.toISOString().split('T')[0];
-            formattedDate = dateStr;
-          }
-
-          const formattedDateCapitalized = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+          // Enviar las fechas en formato ISO 8601 UTC
+          const startDateTime = attendance.classSession.startDateTime.toISOString();
+          const endDateTime = attendance.classSession.endDateTime.toISOString();
 
           const weekData = weekAttendancesMap.get(weekId);
           if (weekData) {
             weekData.attendances.push({
-              date: dateStr,
-              formattedDate: formattedDateCapitalized,
+              startDateTime,
+              endDateTime,
               status: attendance.status,
             });
           }

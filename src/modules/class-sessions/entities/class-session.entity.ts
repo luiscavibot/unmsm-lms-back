@@ -19,14 +19,11 @@ export class ClassSession {
   @Column({ nullable: true })
   weekId: string;
 
-  @Column({ type: 'date' })
-  sessionDate: Date;
+  @Column({ type: 'timestamp' })
+  startDateTime: Date;
 
-  @Column({ type: 'time' })
-  startTime: string;
-
-  @Column({ type: 'time' })
-  endTime: string;
+  @Column({ type: 'timestamp' })
+  endDateTime: Date;
 
   @Column({ nullable: true })
   virtualRoomUrl: string;

@@ -277,19 +277,24 @@ export class GetCourseDetailQuery {
     
     // Obtener el primer día de la semana (lunes)
     const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1));
-    startOfWeek.setHours(0, 0, 0, 0);
+    startOfWeek.setUTCDate(now.getUTCDate() - now.getUTCDay() + (now.getUTCDay() === 0 ? -6 : 1));
+    startOfWeek.setUTCHours(0, 0, 0, 0);
 
     // Obtener el último día de la semana (domingo)
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(11, 59, 59, 999);
+    endOfWeek.setUTCDate(startOfWeek.getUTCDate() + 6);
+    endOfWeek.setUTCHours(11, 59, 59, 999);
 
     // Configurar fechas para el filtro
     const dateFilter = {
       startDate: startOfWeek.toISOString().split('T')[0],
       endDate: endOfWeek.toISOString().split('T')[0],
     };
+
+    console.log('Fecha de hoy:', now);
+    console.log('Inicio de semana:', startOfWeek);
+    console.log('Fin de semana:', endOfWeek);
+    console.log('Filtro de fechas:', dateFilter);
 
     // Usar la tabla adecuada según el rol del usuario
     if (roleName === UserRoles.TEACHER) {
@@ -298,16 +303,14 @@ export class GetCourseDetailQuery {
         .createQueryBuilder('blockAssignment')
         .distinct(true)
         .select('classSession.id', 'id')
-        .addSelect('classSession.sessionDate', 'sessionDate')
-        .addSelect('classSession.startTime', 'startTime')
-        .addSelect('classSession.endTime', 'endTime')
+        .addSelect('classSession.startDateTime', 'startDateTime')
+        .addSelect('classSession.endDateTime', 'endDateTime')
         .addSelect('classSession.virtualRoomUrl', 'virtualRoomUrl')
         .innerJoin('blockAssignment.block', 'block')
         .innerJoin('class_sessions', 'classSession', 'classSession.blockId = block.id')
         .where('blockAssignment.blockId = :blockId', { blockId })
-        .andWhere('classSession.sessionDate BETWEEN :startDate AND :endDate', dateFilter)
-        .orderBy('classSession.sessionDate', 'ASC')
-        .addOrderBy('classSession.startTime', 'ASC')
+        .andWhere('DATE(classSession.startDateTime) BETWEEN :startDate AND :endDate', dateFilter)
+        .orderBy('classSession.startDateTime', 'ASC')
         .getRawMany();
     } else {
       // Para estudiantes usamos enrollmentBlockRepository
@@ -315,29 +318,29 @@ export class GetCourseDetailQuery {
         .createQueryBuilder('enrollmentBlock')
         .distinct(true)
         .select('classSession.id', 'id')
-        .addSelect('classSession.sessionDate', 'sessionDate')
-        .addSelect('classSession.startTime', 'startTime')
-        .addSelect('classSession.endTime', 'endTime')
+        .addSelect('classSession.startDateTime', 'startDateTime')
+        .addSelect('classSession.endDateTime', 'endDateTime')
         .addSelect('classSession.virtualRoomUrl', 'virtualRoomUrl')
         .innerJoin('blocks', 'block', 'block.id = enrollmentBlock.blockId')
         .innerJoin('class_sessions', 'classSession', 'classSession.blockId = block.id')
         .where('enrollmentBlock.blockId = :blockId', { blockId })
-        .andWhere('classSession.sessionDate BETWEEN :startDate AND :endDate', dateFilter)
-        .orderBy('classSession.sessionDate', 'ASC')
-        .addOrderBy('classSession.startTime', 'ASC')
+        .andWhere('DATE(classSession.startDateTime) BETWEEN :startDate AND :endDate', dateFilter)
+        .orderBy('classSession.startDateTime', 'ASC')
         .getRawMany();
     }
   }
 
   /**
-   * Formatea los horarios de las sesiones
+   * Prepara los datos de las sesiones para enviar al frontend
+   * En vez de formatear fechas en el backend, envía los datos crudos para que el frontend
+   * pueda convertir a la zona horaria local del usuario
    */
   private formatSchedules(classSessions: any[]) {
     return classSessions.map((session) => {
-      const sessionDate = new Date(session.sessionDate);
-      const dayName = CourseUtils.getDayName(sessionDate);
-      const formattedDate = CourseUtils.formatDate(sessionDate);
-      return `${dayName} ${formattedDate} / ${CourseUtils.formatTime(session.startTime)} - ${CourseUtils.formatTime(session.endTime)}`;
+      return {
+        startDateTime: session.startDateTime, // Fecha y hora de inicio en UTC ISO8601
+        endDateTime: session.endDateTime      // Fecha y hora de fin en UTC ISO8601
+      };
     });
   }
 
@@ -348,7 +351,7 @@ export class GetCourseDetailQuery {
     const now = new Date();
     
     const nextSession = classSessions.find((session) => {
-      const sessionDate = new Date(session.sessionDate + 'T' + session.startTime);
+      const sessionDate = new Date(session.startDateTime);
       return sessionDate >= now;
     });
 
@@ -449,8 +452,8 @@ export class GetCourseDetailQuery {
       
       courseName = courseOffering.course.name;
       programName = courseOffering.program.name;
-      startDate = courseOffering.startDate.toISOString().split('T')[0];
-      endDate = courseOffering.endDate.toISOString().split('T')[0];
+      startDate = courseOffering.startDate.toISOString();
+      endDate = courseOffering.endDate.toISOString();
       semester = `${courseOffering.semester.year}-${courseOffering.semester.name}`;
       
       // Obtener el profesor responsable
@@ -463,8 +466,8 @@ export class GetCourseDetailQuery {
       
       courseName = enrollmentData.courseOffering.course.name;
       programName = enrollmentData.courseOffering.program.name;
-      startDate = enrollmentData.courseOffering.startDate.toISOString().split('T')[0];
-      endDate = enrollmentData.courseOffering.endDate.toISOString().split('T')[0];
+      startDate = enrollmentData.courseOffering.startDate.toISOString();
+      endDate = enrollmentData.courseOffering.endDate.toISOString();
       semester = `${enrollmentData.courseOffering.semester.year}-${enrollmentData.courseOffering.semester.name}`;
       endNote = enrollmentData.finalAverage;
       

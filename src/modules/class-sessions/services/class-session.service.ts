@@ -6,7 +6,7 @@ import { UpdateClassSessionDto } from '../dtos/update-class-session.dto';
 import { CLASS_SESSION_REPOSITORY } from '../tokens';
 import { BlockService } from 'src/modules/blocks/services/block.service';
 import { WeekService } from 'src/modules/weeks/services/week.service';
-import { ClassDayInfo, ClassDaysResponseDto } from '../dtos/class-days-response.dto';
+import { ClassDaysResponseDto } from '../dtos/class-days-response.dto';
 import { ClassSessionPermissionResult, ClassSessionAccessType } from '../dtos/class-session-permission.dto';
 import { BlockAssignmentService } from 'src/modules/block-assignments/services/block-assignment.service';
 import { BlockRolType } from 'src/modules/block-assignments/enums/block-rol-type.enum';
@@ -156,22 +156,12 @@ export class ClassSessionService {
     const classSessions = await this.classSessionRepository.findByBlockId(blockId);
     
     // Formatear la respuesta para el datepicker
-    const classDays: ClassDayInfo[] = classSessions.map(session => {
-      // Asegurar que la fecha esté en formato YYYY-MM-DD
-      const date = new Date(session.sessionDate);
-      const formattedDate = date.toISOString().split('T')[0];
-      
-      return {
-        date: formattedDate,
-        startTime: session.startTime,
-        endTime: session.endTime,
-        sessionId: session.id,
-        virtualRoomUrl: session.virtualRoomUrl
-      };
+    const classDays: string[] = classSessions.map(session => {      
+      return session.startDateTime.toISOString();
     });
     
     // Ordenar por fecha
-    classDays.sort((a, b) => a.date.localeCompare(b.date));
+    classDays.sort((a, b) => a.localeCompare(b));
     
     return { classDays };
   }

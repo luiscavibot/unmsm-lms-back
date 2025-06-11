@@ -178,6 +178,7 @@ export class EnrollmentBlockService {
     date?: Date,
     userId?: string,
     rolName?: string | null,
+    timezone?: string,
   ): Promise<EnrolledStudentsResponseDto> {
     // Verificar que el bloque existe
     await this.blockService.findById(blockId);
@@ -200,7 +201,9 @@ export class EnrollmentBlockService {
         const classSession = await this.classSessionService.findOne(result.classSessionId);
         if (classSession) {
           // Verificar si la asistencia puede ser editada según las reglas de tiempo
-          const timeWindow = AttendanceTimeValidator.getTimeWindow(classSession);
+          // Usamos UTC como valor por defecto para la zona horaria
+          console.log('Timezone:', timezone);
+          const timeWindow = AttendanceTimeValidator.getTimeWindow(classSession, timezone || 'UTC');
           result.canEditAttendance = timeWindow.isWithinValidPeriod;
           result.attendanceStatusMessage = timeWindow.statusMessage;
           result.messageType = timeWindow.messageType;
@@ -235,6 +238,7 @@ export class EnrollmentBlockService {
     blockId: string,
     userId?: string,
     rolName?: string | null,
+    timezone?: string,
   ): Promise<EnrolledStudentsGradesResponseDto> {
     // Verificar que el bloque existe
     await this.blockService.findById(blockId);
@@ -250,4 +254,6 @@ export class EnrollmentBlockService {
     // Usar el query object para obtener los estudiantes matriculados con sus notas
     return await this.findEnrolledStudentsGradesQuery.execute(blockId);
   }
+
+
 }
