@@ -15,14 +15,18 @@ import { Attendance } from '../attendance/entities/attendance.entity';
 import { ClassSession } from '../class-sessions/entities/class-session.entity';
 import { Grade } from '../grades/entities/grade.entity';
 import { Evaluation } from '../evaluations/entities/evaluation.entity';
+import { Block } from '../blocks/entities/block.entity';
 import { FindEnrolledStudentsQuery } from './queries/find-enrolled-students.query';
 import { FindEnrolledStudentsGradesQuery } from './queries/find-enrolled-students-grades.query';
+import { FindStudentScoresQuery } from './queries/find-student-scores.query';
 import { BlockAssignmentsModule } from '../block-assignments/block-assignments.module';
 import { EvaluationsModule } from '../evaluations/evaluations.module';
+import { CourseOfferingModule } from '../course-offerings/course-offering.module';
+import { CourseModule } from '../courses/course.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EnrollmentBlock, Enrollment, Attendance, ClassSession, Grade, Evaluation]),
+    TypeOrmModule.forFeature([EnrollmentBlock, Enrollment, Attendance, ClassSession, Grade, Evaluation, Block]),
     EnrollmentModule,
     BlocksModule,
     AttendanceModule,
@@ -30,6 +34,8 @@ import { EvaluationsModule } from '../evaluations/evaluations.module';
     UsersModule,
     BlockAssignmentsModule,
     EvaluationsModule,
+    CourseOfferingModule,
+    CourseModule,
   ],
   controllers: [EnrollmentBlockController],
   providers: [
@@ -39,6 +45,7 @@ import { EvaluationsModule } from '../evaluations/evaluations.module';
       useClass: TypeormEnrollmentBlocksRepository,
     },
     FindEnrolledStudentsQuery,
+    FindStudentScoresQuery,
     FindEnrolledStudentsGradesQuery,
   ],
   exports: [EnrollmentBlockService],
