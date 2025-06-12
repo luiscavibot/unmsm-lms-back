@@ -1,11 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Headers } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Headers, Res } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth, ApiHeader, ApiParam } from '@nestjs/swagger';
+import { Response } from 'express';
 import { EnrollmentBlockService } from '../services/enrollment-block.service';
 import { CreateEnrollmentBlockDto } from '../dtos/create-enrollment-block.dto';
 import { UpdateEnrollmentBlockDto } from '../dtos/update-enrollment-block.dto';
 import { EnrollmentBlock } from '../entities/enrollment-block.entity';
 import { EnrolledStudentsResponseDto } from '../dtos/enrolled-students-response.dto';
 import { EnrolledStudentsGradesResponseDto } from '../dtos/enrolled-students-grades-response.dto';
+import { StudentScoresResponseDto } from '../dtos/student-scores-response.dto';
 import { FindEnrolledStudentsQueryDto } from '../dtos/find-enrolled-students-query.dto';
 import { CurrentUserToken } from '../../../common/auth/decorators/current-user.decorator';
 import { UserPayload } from '../../../common/auth/interfaces';
@@ -101,6 +103,70 @@ export class EnrollmentBlockController {
       user.rolName,
       timezone
     );
+  }
+
+  @Get('course-scores/:courseOfferingId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Obtener las calificaciones de todos los estudiantes de un curso',
+    description: 'Devuelve una lista de estudiantes con sus calificaciones por tipo de bloque (teoría y práctica) y su nota final para un curso específico.'
+  })
+  @ApiParam({
+    name: 'courseOfferingId',
+    description: 'ID de la oferta de curso',
+    type: String
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Calificaciones de los estudiantes',
+    type: StudentScoresResponseDto
+  })
+  async getCourseScores(
+    @Param('courseOfferingId') courseOfferingId: string,
+    @CurrentUserToken() user: UserPayload
+  ): Promise<StudentScoresResponseDto> {
+    return await this.enrollmentBlockService.getCourseScores(courseOfferingId);
+  }
+
+  @Get('course-scores-excel/:courseOfferingId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Exportar las calificaciones de todos los estudiantes de un curso a Excel',
+    description: 'Devuelve un archivo Excel con las calificaciones de los estudiantes y estadísticas del curso.'
+  })
+  @ApiParam({
+    name: 'courseOfferingId',
+    description: 'ID de la oferta de curso',
+    type: String
+  })
+  @ApiHeader({
+    name: 'lms-timezone',
+    description: 'Zona horaria del usuario (ej. America/Lima)',
+    required: false
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Archivo Excel con las calificaciones',
+  })
+  async exportCourseScoresToExcel(
+    @Param('courseOfferingId') courseOfferingId: string,
+    @CurrentUserToken() user: UserPayload,
+    @Headers('lms-timezone') timezone: string,
+    @Res() res: Response
+  ): Promise<void> {    
+    // Si no se proporciona un timezone, usar America/Lima como predeterminado para clientes peruanos
+    const clientTimezone = timezone || 'America/Lima';
+    
+    const { stream, filename } = await this.enrollmentBlockService.exportCourseScoresToExcel(courseOfferingId, clientTimezone);
+    
+    // Configurar encabezados para la descarga del archivo
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    // Enviar el stream al cliente
+    stream.pipe(res);
   }
 
   @Get('enrollment/:enrollmentId')

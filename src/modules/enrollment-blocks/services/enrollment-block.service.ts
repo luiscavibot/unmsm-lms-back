@@ -12,9 +12,16 @@ import { BlockAssignmentService } from 'src/modules/block-assignments/services/b
 import { EnrollmentPermissionResult, EnrollmentAccessType } from '../dtos/enrollment-permission.dto';
 import { BlockRolType } from 'src/modules/block-assignments/enums/block-rol-type.enum';
 import { FindEnrolledStudentsGradesQuery } from '../queries/find-enrolled-students-grades.query';
+import { FindStudentScoresQuery } from '../queries/find-student-scores.query';
 import { EnrolledStudentsGradesResponseDto } from '../dtos/enrolled-students-grades-response.dto';
+import { StudentScoresResponseDto } from '../dtos/student-scores-response.dto';
 import { AttendanceTimeValidator } from 'src/modules/attendance/utils/attendance-time-validator';
 import { ClassSessionService } from 'src/modules/class-sessions/services/class-session.service';
+import { CourseOfferingService } from 'src/modules/course-offerings/services/course-offering.service';
+import { CourseService } from 'src/modules/courses/services/course.service';
+import { formatDateWithTimezone } from 'src/utils/date-format.utils';
+import * as Excel from 'exceljs';
+import { Readable } from 'stream';
 
 @Injectable()
 export class EnrollmentBlockService {
@@ -27,6 +34,9 @@ export class EnrollmentBlockService {
     private readonly blockAssignmentService: BlockAssignmentService,
     private readonly findEnrolledStudentsGradesQuery: FindEnrolledStudentsGradesQuery,
     private readonly classSessionService: ClassSessionService,
+    private readonly findStudentScoresQuery: FindStudentScoresQuery,
+    private readonly courseOfferingService: CourseOfferingService,
+    private readonly courseService: CourseService,
   ) {}
 
   async create(createEnrollmentBlockDto: CreateEnrollmentBlockDto): Promise<EnrollmentBlock> {
@@ -255,5 +265,90 @@ export class EnrollmentBlockService {
     return await this.findEnrolledStudentsGradesQuery.execute(blockId);
   }
 
+  /**
+   * Obtiene las calificaciones de todos los estudiantes para un curso específico
+   * @param courseOfferingId ID de la oferta de curso
+   */
+  async getCourseScores(courseOfferingId: string): Promise<StudentScoresResponseDto> {
+    return await this.findStudentScoresQuery.execute(courseOfferingId);
+  }
 
+  /**
+   * Exporta las calificaciones de todos los estudiantes para un curso específico a un archivo Excel
+   * @param courseOfferingId ID de la oferta de curso
+   * @param timezone Zona horaria del usuario
+   * @returns Objeto con el stream y el nombre del archivo
+   */
+  async exportCourseScoresToExcel(courseOfferingId: string, timezone: string = 'UTC'): Promise<{ stream: Readable, filename: string }> {
+    // Obtener el nombre del curso para incluirlo en el nombre del archivo
+    const courseOffering = await this.courseOfferingService.findOne(courseOfferingId);
+    const course = await this.courseService.findOne(courseOffering.courseId);
+    
+    // Formatear la fecha actual según la zona horaria del usuario usando la utilidad
+    const formattedDate = formatDateWithTimezone(new Date(), timezone);
+    
+    // Generar un nombre de archivo que incluya el nombre del curso y la fecha
+    const sanitizedCourseName = course.name.replace(/[\\\/\:\*\?\"\<\>\|]/g, '_').substring(0, 50);
+    const filename = `Calificaciones-${sanitizedCourseName}-${formattedDate}.xlsx`;
+    
+    // Primero obtenemos los datos utilizando la consulta existente
+    const data = await this.findStudentScoresQuery.execute(courseOfferingId);
+
+    // Crear un nuevo libro de Excel
+    const workbook = new Excel.Workbook();
+
+    // Agregar una hoja para las calificaciones de estudiantes
+    const studentsSheet = workbook.addWorksheet('Calificaciones Estudiantes');
+
+    // Definir las columnas para la hoja de estudiantes
+    studentsSheet.columns = [
+      { header: 'Nombre', key: 'nombre', width: 30 },
+      { header: 'Nota Teoría', key: 'theoryScore', width: 15 },
+      { header: 'Nota Práctica', key: 'practiceScore', width: 15 },
+      { header: 'Nota Final', key: 'finalScore', width: 15 },
+    ];
+
+    // Dar formato a los encabezados
+    studentsSheet.getRow(1).font = { bold: true };
+    studentsSheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Agregar los datos de los estudiantes
+    data.students.forEach((student) => {
+      studentsSheet.addRow({
+        nombre: student.nombre,
+        theoryScore: student.theoryScore,
+        practiceScore: student.practiceScore,
+        finalScore: student.finalScore,
+      });
+    });
+
+    // Agregar una hoja para las estadísticas
+    const statsSheet = workbook.addWorksheet('Estadísticas');
+
+    // Definir las columnas para la hoja de estadísticas
+    statsSheet.columns = [
+      { header: 'Métrica', key: 'metric', width: 30 },
+      { header: 'Valor', key: 'value', width: 15 },
+    ];
+
+    // Dar formato a los encabezados
+    statsSheet.getRow(1).font = { bold: true };
+    statsSheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Agregar las estadísticas
+    statsSheet.addRow({ metric: 'Promedio del curso', value: data.meta.averageCourse });
+    statsSheet.addRow({ metric: 'Nota más alta', value: data.meta.highScore });
+    statsSheet.addRow({ metric: 'Nota más baja', value: data.meta.lowScore });
+    statsSheet.addRow({ metric: 'Desviación estándar', value: data.meta.standardDeviation });
+    statsSheet.addRow({ metric: 'Estudiantes aprobados', value: data.meta.passedStudents });
+    statsSheet.addRow({ metric: 'Estudiantes desaprobados', value: data.meta.failedStudents });
+
+    // Crear un stream para devolver el archivo Excel
+    const buffer = await workbook.xlsx.writeBuffer();
+    const stream = new Readable();
+    stream.push(buffer);
+    stream.push(null);
+
+    return { stream, filename };
+  }
 }
