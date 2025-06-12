@@ -37,7 +37,8 @@ export class FindEnrolledStudentsQuery {
 
     // Preparar la respuesta
     const result: EnrolledStudentsResponseDto = {
-      date: null,
+      startDateTime: null,
+      endDateTime: null,
       classSessionId: null,
       studentNumber: 0,
       canEditAttendance: false,
@@ -66,25 +67,26 @@ export class FindEnrolledStudentsQuery {
     });
 
     // 3. Encontrar la sesión de clase apropiada para la asistencia
-    let classSessions: { id: string; sessionDate: Date }[] = [];
+    let classSessions: { id: string; startDateTime: Date; endDateTime: Date }[] = [];
 
     if (date) {
       try {
-        // Asegurarse de que date sea un objeto Date válido
-        const validDate = date instanceof Date && !isNaN(date.getTime()) 
-          ? date 
-          : new Date(date);
+        // Con la validación previa, date ya debe ser un objeto Date válido en formato ISO
+        // Solo verificamos que sea válido para evitar errores
+        if (!(date instanceof Date) || isNaN(date.getTime())) {
+          throw new Error('Formato de fecha no válido');
+        }
         
         // Formatear la fecha para asegurar consistencia en la comparación
-        const formattedDate = validDate.toISOString().split('T')[0];
+        const formattedDate = date.toISOString().split('T')[0];
         
         // Si se proporciona una fecha, buscar sesiones en esa fecha
         classSessions = await this.classSessionRepository
           .createQueryBuilder('classSession')
-          .select(['classSession.id', 'classSession.sessionDate'])
+          .select(['classSession.id', 'classSession.startDateTime', 'classSession.endDateTime'])
           .where('classSession.blockId = :blockId', { blockId })
-          .andWhere('DATE(classSession.sessionDate) = DATE(:date)', { date: formattedDate })
-          .orderBy('classSession.sessionDate', 'ASC')
+          .andWhere('DATE(classSession.startDateTime) = DATE(:date)', { date: formattedDate })
+          .orderBy('classSession.startDateTime', 'ASC')
           .getMany();
         
       } catch (error) {
@@ -97,15 +99,13 @@ export class FindEnrolledStudentsQuery {
       const now = new Date();
       const nowFormatted = now.toISOString().split('T')[0]; // Gets YYYY-MM-DD
 
-      console.log('now', now);
-
       // Primero, intentar encontrar la sesión más cercana en el futuro
       let futureSessions = await this.classSessionRepository
         .createQueryBuilder('classSession')
-        .select(['classSession.id', 'classSession.sessionDate'])
+        .select(['classSession.id', 'classSession.startDateTime', 'classSession.endDateTime'])
         .where('classSession.blockId = :blockId', { blockId })
-        .andWhere('DATE(classSession.sessionDate) >= :now', { now: nowFormatted })
-        .orderBy('classSession.sessionDate', 'ASC')
+        .andWhere('DATE(classSession.startDateTime) >= :now', { now: nowFormatted })
+        .orderBy('classSession.startDateTime', 'ASC')
         .limit(1)
         .getMany();
 
@@ -115,9 +115,9 @@ export class FindEnrolledStudentsQuery {
       if (!futureSessions || futureSessions.length === 0) {
         classSessions = await this.classSessionRepository
           .createQueryBuilder('classSession')
-          .select(['classSession.id', 'classSession.sessionDate'])
+          .select(['classSession.id', 'classSession.startDateTime', 'classSession.endDateTime'])
           .where('classSession.blockId = :blockId', { blockId })
-          .orderBy('classSession.sessionDate', 'DESC')
+          .orderBy('classSession.startDateTime', 'DESC')
           .limit(1)
           .getMany();
       } else {
@@ -134,13 +134,14 @@ export class FindEnrolledStudentsQuery {
     // Si no se encontraron sesiones para la fecha proporcionada explícitamente, retornar sin estudiantes
     if (date && !classSessionId) {
       try {
-        // Formatear la fecha para el mensaje
-        const formattedDate = date instanceof Date 
-          ? date.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
-          : new Date(date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        // Obtener la fecha en formato ISO para el mensaje
+        const dateStr = date instanceof Date 
+          ? date.toISOString().split('T')[0]
+          : new Date(date).toISOString().split('T')[0];
         
         // Actualizar mensaje para indicar que no hay clases en la fecha solicitada
-        result.attendanceStatusMessage = `No hay sesiones de clase programadas para el ${formattedDate}`;
+        // Enviar la fecha sin formatear para que el frontend la formatee según la localización del usuario
+        result.attendanceStatusMessage = `No hay sesiones de clase programadas para la fecha ${dateStr}`;
       } catch (e) {
         // Si hay error al formatear la fecha, usar mensaje genérico
         result.attendanceStatusMessage = `No hay sesiones de clase programadas para la fecha solicitada`;
@@ -152,26 +153,39 @@ export class FindEnrolledStudentsQuery {
     }
 
     // Guardar la fecha de la sesión para incluirla en los metadatos
-    if (classSessions.length > 0 && classSessions[0].sessionDate) {
+    if (classSessions.length > 0 && classSessions[0].startDateTime) {
       try {
         // Convertir a objeto Date si no lo es ya
         let dateValue;
-        if (typeof classSessions[0].sessionDate === 'string') {
-          dateValue = new Date(classSessions[0].sessionDate);
-        } else if (classSessions[0].sessionDate instanceof Date) {
-          dateValue = classSessions[0].sessionDate;
+        if (typeof classSessions[0].startDateTime === 'string') {
+          dateValue = new Date(classSessions[0].startDateTime);
+        } else if (classSessions[0].startDateTime instanceof Date) {
+          dateValue = classSessions[0].startDateTime;
         } else {
           // Si es un objeto pero no es una fecha, intentar convertirlo
-          dateValue = new Date(String(classSessions[0].sessionDate));
+          dateValue = new Date(String(classSessions[0].startDateTime));
         }
 
         // Verificar que la fecha sea válida
         if (!isNaN(dateValue.getTime())) {
-          // Formatear como YYYY-MM-DD
-          const year = dateValue.getFullYear();
-          const month = String(dateValue.getMonth() + 1).padStart(2, '0');
-          const day = String(dateValue.getDate()).padStart(2, '0');
-          result.date = `${year}-${month}-${day}`;
+          // Agregar startDateTime y endDateTime en formato ISO
+          result.startDateTime = dateValue.toISOString();
+          
+          // Procesar endDateTime
+          if (classSessions[0].endDateTime) {
+            let endDateValue;
+            if (typeof classSessions[0].endDateTime === 'string') {
+              endDateValue = new Date(classSessions[0].endDateTime);
+            } else if (classSessions[0].endDateTime instanceof Date) {
+              endDateValue = classSessions[0].endDateTime;
+            } else {
+              endDateValue = new Date(String(classSessions[0].endDateTime));
+            }
+            
+            if (!isNaN(endDateValue.getTime())) {
+              result.endDateTime = endDateValue.toISOString();
+            }
+          }
         } else {
           console.error('Invalid date value after conversion');
         }
@@ -179,8 +193,13 @@ export class FindEnrolledStudentsQuery {
         console.error('Error formatting date:', e);
         // En caso de error, intentar un enfoque más simple
         try {
-          const simpleDate = new Date(String(classSessions[0].sessionDate));
-          result.date = simpleDate.toISOString().split('T')[0];
+          const startDate = new Date(String(classSessions[0].startDateTime));
+          result.startDateTime = startDate.toISOString();
+          
+          if (classSessions[0].endDateTime) {
+            const endDate = new Date(String(classSessions[0].endDateTime));
+            result.endDateTime = endDate.toISOString();
+          }
         } catch (innerError) {
           console.error('Failed fallback date formatting:', innerError);
         }

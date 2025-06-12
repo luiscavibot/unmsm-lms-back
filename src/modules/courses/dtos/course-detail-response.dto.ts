@@ -52,10 +52,18 @@ export class BlockDetailDto {
 
   @ApiProperty({
     description: 'Horarios de clase',
-    type: [String],
-    example: ['Lunes: 9:00 - 11:00', 'Jueves: 21:00 - 22:30'],
+    example: [
+      {
+        startDateTime: '2025-06-11T14:00:00Z',
+        endDateTime: '2025-06-11T16:00:00Z'
+      },
+      {
+        startDateTime: '2025-06-13T19:00:00Z',
+        endDateTime: '2025-06-13T21:00:00Z'
+      }
+    ],
   })
-  schedule: string[];
+  schedule: { startDateTime: string; endDateTime: string; }[];
 
   @ApiProperty({
     description: 'Número de aula',

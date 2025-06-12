@@ -28,33 +28,4 @@ export class CourseUtils {
       return '';
     }
   }
-  
-  /**
-   * Añade un cero delante de números menores que 10
-   */
-  static padZero(value: number): string {
-    return value < 10 ? `0${value}` : `${value}`;
-  }
-
-  /**
-   * Formatea una fecha para mostrarla en formato dd-mm
-   */
-  static formatDate(date: Date): string {
-    return `${CourseUtils.padZero(date.getDate())}-${CourseUtils.padZero(date.getMonth() + 1)}`;
-  }
-
-  /**
-   * Obtiene el nombre del día de la semana en español
-   */
-  static getDayName(date: Date): string {
-    const dayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-    return dayNames[date.getDay()];
-  }
-
-  /**
-   * Formatea una hora desde un string en formato HH:MM:SS a HH:MM
-   */
-  static formatTime(time: string): string {
-    return time.substring(0, 5);
-  }
 }

@@ -59,7 +59,7 @@ export class AttendanceService {
     await this.attendanceRepository.delete(id);
   }
 
-  async findAttendancesByBlockId(blockId: string, userId?: string): Promise<AttendanceByWeekResponseDto> {
+  async findAttendancesByBlockId(blockId: string, userId?: string, timezone: string = 'UTC'): Promise<AttendanceByWeekResponseDto> {
     // Verificar que el bloque existe
     await this.blockService.findById(blockId);
     
@@ -83,6 +83,7 @@ export class AttendanceService {
         // En caso de error, continuamos sin filtrar por enrollmentId
       }
     }
+    console.log('Buscando asistencias para el bloque:', blockId, 'con enrollmentId:', enrollmentId);
     
     return await this.attendanceRepository.findAttendancesByBlockId(blockId, enrollmentId);
   }
@@ -94,7 +95,7 @@ export class AttendanceService {
    * @param rolName Rol del usuario que registra la asistencia
    * @returns Información de las asistencias procesadas
    */
-  async registerBulkAttendance(bulkAttendanceDto: BulkAttendanceDto, userId: string, rolName: string | null): Promise<BulkAttendanceResponseDto> {
+  async registerBulkAttendance(bulkAttendanceDto: BulkAttendanceDto, userId: string, rolName: string | null, timezone: string = 'UTC'): Promise<BulkAttendanceResponseDto> {
     try {
       // 1. Validar la sesión de clase
       const classSession = await this.classSessionService.findOne(bulkAttendanceDto.classSessionId);
@@ -105,7 +106,7 @@ export class AttendanceService {
       
       // Validar que el registro de asistencia esté dentro del horario permitido
       // Solo se permite registrar desde 10 minutos antes de la clase hasta el final del día
-      AttendanceTimeValidator.validate(classSession);
+      AttendanceTimeValidator.validate(classSession, timezone);
       
       // 2. Validar permisos del usuario (solo profesores asignados al bloque pueden registrar asistencia)
       if (rolName !== 'TEACHER') {
@@ -153,7 +154,7 @@ export class AttendanceService {
               enrollmentId: record.enrollmentId,
               classSessionId: bulkAttendanceDto.classSessionId,
               status: record.status,
-              attendanceDate: existingAttendance.attendanceDate
+              attendanceDate: new Date()
             };
           } else {
             // Si no existe, creamos un nuevo registro
@@ -169,20 +170,13 @@ export class AttendanceService {
         // Crear o actualizar todos los registros en una sola operación
         const attendanceResults = await this.attendanceRepository.createOrUpdateMany(attendancesToSave);
         
-        // Formatear la fecha de la sesión para la respuesta
+        // Obtener información de la sesión para la respuesta
         let sessionInfo = 'Sesión de clase';
-        if (classSession.sessionDate) {
-          const sessionDate = new Date(classSession.sessionDate);
-          try {
-            sessionInfo = `Sesión del ${sessionDate.toLocaleDateString('es-ES', {
-              day: '2-digit',
-              month: 'long',
-              year: 'numeric'
-            })}`;
-          } catch (e) {
-            // Si hay un error al formatear la fecha, usar un formato simple
-            sessionInfo = `Sesión del ${sessionDate.toISOString().split('T')[0]}`;
-          }
+        if (classSession.startDateTime) {
+          const sessionDate = new Date(classSession.startDateTime);
+          
+          // Simplemente usar la fecha en formato ISO para que el frontend la formatee
+          sessionInfo = `Sesión del ${sessionDate.toISOString().split('T')[0]}`;
         }
         
         return {

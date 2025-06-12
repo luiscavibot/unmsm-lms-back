@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Headers } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 import { EnrollmentBlockService } from '../services/enrollment-block.service';
 import { CreateEnrollmentBlockDto } from '../dtos/create-enrollment-block.dto';
 import { UpdateEnrollmentBlockDto } from '../dtos/update-enrollment-block.dto';
@@ -47,18 +47,25 @@ export class EnrollmentBlockController {
     name: 'date', 
     required: false, 
     type: String, 
-    description: 'Fecha opcional para buscar la asistencia (formato YYYY-MM-DD)' 
+    description: 'Fecha opcional para buscar la asistencia (formato estricto ISO 8601, ejemplo: 2025-05-15T00:00:00Z)' 
+  })
+  @ApiHeader({
+    name: 'lms-timezone',
+    description: 'Zona horaria del usuario (ej. America/Lima, America/Bogota)',
+    required: false,
   })
   async findEnrolledStudents(
     @Param('blockId') blockId: string,
     @Query() query: FindEnrolledStudentsQueryDto,
-    @CurrentUserToken() user: UserPayload
+    @CurrentUserToken() user: UserPayload,
+    @Headers('lms-timezone') timezone?: string
   ): Promise<EnrolledStudentsResponseDto> {
     return await this.enrollmentBlockService.findEnrolledStudents(
       blockId, 
       query.date, 
       user.userId, 
-      user.rolName
+      user.rolName,
+      timezone
     );
   }
 
@@ -78,14 +85,21 @@ export class EnrollmentBlockController {
     status: 403,
     description: 'No tiene permisos para acceder a esta información'
   })
+  @ApiHeader({
+    name: 'lms-timezone',
+    description: 'Zona horaria del usuario (ej. America/Lima, America/Bogota)',
+    required: false,
+  })
   async findEnrolledStudentsGrades(
     @Param('blockId') blockId: string,
-    @CurrentUserToken() user: UserPayload
+    @CurrentUserToken() user: UserPayload,
+    @Headers('lms-timezone') timezone?: string
   ): Promise<EnrolledStudentsGradesResponseDto> {
     return await this.enrollmentBlockService.findEnrolledStudentsGrades(
       blockId, 
       user.userId, 
-      user.rolName
+      user.rolName,
+      timezone
     );
   }
 

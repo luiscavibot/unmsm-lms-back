@@ -20,32 +20,42 @@ export class CreateClassSessionDto {
   weekId: string;
 
   @ApiProperty({
-    description: 'Fecha de la sesión de clase',
-    example: '2024-01-20'
+    description: 'Fecha y hora de inicio de la sesión en formato ISO 8601',
+    example: '2024-01-20T09:00:00Z'
   })
   @Transform(({ value }) => {
-    const [year, month, day] = value.split('-').map(Number);
-    return new Date(year, month - 1, day, 12, 0, 0);
+    if (value && typeof value === 'string') {
+      // Validar formato ISO8601
+      const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+      if (!isoRegex.test(value)) {
+        throw new Error('La fecha debe estar en formato ISO8601 (YYYY-MM-DDTHH:mm:ssZ)');
+      }
+      return new Date(value);
+    }
+    return value;
   })
   @IsDate()
   @IsNotEmpty()
-  sessionDate: Date;
+  startDateTime: Date;
 
   @ApiProperty({
-    description: 'Hora de inicio de la sesión de clase',
-    example: '09:00'
+    description: 'Fecha y hora de fin de la sesión en formato ISO 8601',
+    example: '2024-01-20T11:00:00Z'
   })
-  @IsString()
-  @IsNotEmpty()
-  startTime: string;
-
-  @ApiProperty({
-    description: 'Hora de finalización de la sesión de clase',
-    example: '11:00'
+  @Transform(({ value }) => {
+    if (value && typeof value === 'string') {
+      // Validar formato ISO8601
+      const isoRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+      if (!isoRegex.test(value)) {
+        throw new Error('La fecha debe estar en formato ISO8601 (YYYY-MM-DDTHH:mm:ssZ)');
+      }
+      return new Date(value);
+    }
+    return value;
   })
-  @IsString()
+  @IsDate()
   @IsNotEmpty()
-  endTime: string;
+  endDateTime: Date;
 
   @ApiProperty({
     description: 'URL de la sala virtual para la sesión de clase',

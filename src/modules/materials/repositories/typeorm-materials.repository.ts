@@ -17,6 +17,9 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
   ) {}
 
   async create(material: Material): Promise<Material> {
+    if (!material.date) {
+      material.date = new Date();
+    }
     return await this.materialRepository.save(material);
   }
 
@@ -88,9 +91,6 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
           }
         }
 
-        // Formatear la fecha
-        const uploadDate = item.uploadDate ? new Date(item.uploadDate).toISOString().split('T')[0] : '';
-
         const userName = await this.userService.findOne(item.uploadedById);
 
         // Construir la URL del material según el tipo
@@ -106,7 +106,8 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
         
         // Calcular si el material es reciente (dentro de los últimos 7 días)
         const isRecent = item.uploadDate ? 
-          (new Date().getTime() - new Date(item.uploadDate).getTime()) / (1000 * 60 * 60 * 24) <= 7 : 
+          // Crea ambas fechas como objetos Date y obtener timestamps UTC
+          (Date.now() - new Date(item.uploadDate).getTime()) / (1000 * 60 * 60 * 24) <= 7 : 
           false;
         
         // Determinar las etiquetas según las condiciones
@@ -116,7 +117,7 @@ export class TypeormMaterialsRepository implements IMaterialRepository {
           materialId: item.materialId,
           name: item.name,
           materialType: item.materialType,
-          uploadDate: uploadDate,
+          uploadDate: item.uploadDate.toISOString(),
           uploadedById: item.uploadedById,
           uploadedByName: userName.name,
           materialUrl: materialUrl,
